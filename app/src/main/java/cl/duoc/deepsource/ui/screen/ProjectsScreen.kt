@@ -1,5 +1,8 @@
 package cl.duoc.deepsource.ui.screen
 
+
+import cl.duoc.deepsource.data.auth.AuthManager
+import cl.duoc.deepsource.domain.model.User
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -61,6 +64,8 @@ private val GlassBorder = Color(0x26FFFFFF)
 
 @Composable
 fun ProjectsScreen(onRegisterTime: () -> Unit, onProfile: () -> Unit) {
+    val user = AuthManager.currentUser.value ?: return
+    val userProjects = MockData.getProjectsForUser(user.id)
     val selectedProjectId by MockData.selectedProjectId
     var statusLegendExpanded by remember { mutableStateOf(false) }
 
@@ -70,19 +75,19 @@ fun ProjectsScreen(onRegisterTime: () -> Unit, onProfile: () -> Unit) {
             modifier = Modifier.fillMaxSize().statusBarsPadding(),
             contentPadding = PaddingValues(bottom = 136.dp)
         ) {
-            item { ProjectsHeader() }
+            item { ProjectsHeader(user) }
             item {
                 Column(
                     modifier = Modifier.padding(start = 16.dp, top = 20.dp, end = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    ProjectIntro()
+                    ProjectIntro(user)
                     ProjectFilter()
                     ProjectStatusLegend(statusLegendExpanded) { statusLegendExpanded = !statusLegendExpanded }
                 }
             }
             item { Spacer(Modifier.height(16.dp)) }
-            items(MockData.projects, key = { it.id }) { project ->
+            items(userProjects, key = { it.id }) { project ->
                 ProjectCard(
                     project = project,
                     selected = project.id == selectedProjectId,
@@ -118,7 +123,13 @@ private fun ProjectsAmbientBackground() {
 }
 
 @Composable
-private fun ProjectsHeader() {
+private fun ProjectsHeader(user: User) {
+    val initials = user.name
+        .split(" ")
+        .filter { it.isNotBlank() }
+        .take(2)
+        .joinToString("") { it.first().uppercase() }
+
     Surface(
         modifier = Modifier.fillMaxWidth().height(72.dp),
         color = Color(0x08FFFFFF),
@@ -143,16 +154,16 @@ private fun ProjectsHeader() {
                 Box(
                     modifier = Modifier.size(38.dp).background(Color(0x2942C7B8), CircleShape).clip(CircleShape),
                     contentAlignment = Alignment.Center
-                ) { Text("MS", color = PrimaryTeal, fontWeight = FontWeight.Bold, fontSize = 13.sp) }
+                ) { Text(initials, color = PrimaryTeal, fontWeight = FontWeight.Bold, fontSize = 13.sp) }
             }
         }
     }
 }
 
 @Composable
-private fun ProjectIntro() {
+private fun ProjectIntro(user: User) {
     Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-        Text("ESPACIO DE MARINA", color = PrimaryTeal, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Text("ESPACIO DE ${user.name.substringBefore(" ").uppercase()}", color = PrimaryTeal, fontSize = 12.sp, fontWeight = FontWeight.Bold)
         Text("Selecciona un proyecto", color = MainText, fontSize = 28.sp, lineHeight = 34.sp)
         Text("El proyecto activo se usará en tu próximo registro de horario.", color = MutedText, fontSize = 13.sp, lineHeight = 19.sp)
     }

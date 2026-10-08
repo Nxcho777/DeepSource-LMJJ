@@ -1,5 +1,6 @@
 package cl.duoc.deepsource.data.mock
 
+import cl.duoc.deepsource.domain.model.UserRole
 import cl.duoc.deepsource.domain.model.Project
 import cl.duoc.deepsource.domain.model.TimeEntry
 import cl.duoc.deepsource.domain.model.User
@@ -8,24 +9,75 @@ import androidx.compose.runtime.mutableStateOf
 
 object MockData {
     val selectedProjectId = mutableStateOf("project-1")
-    val currentUser = User(
-        id = "user-1",
-        name = "Marina Soto",
-        email = "marina.soto@deepsource.cl"
-    )
 
     val users = listOf(
-        currentUser,
-        User(id = "user-2", name = "Tomás Rojas", email = "tomas.rojas@deepsource.cl"),
-        User(id = "user-3", name = "Camila Vega", email = "camila.vega@deepsource.cl")
+        User(
+            id = "user-1",
+            name = "Marina Soto",
+            email = "marina.soto@deepsource.cl",
+            role = UserRole.LEADER
+        ),
+        User(
+            id = "user-2",
+            name = "Carlos Lopez",
+            email = "carlos.lopez@deepsource.cl",
+            role = UserRole.DEV
+        ),
+        User(
+            id = "user-3",
+            name = "Juan Perez",
+            email = "juan.perez@deepsource.cl",
+            role = UserRole.DEV
+        )
     )
 
     val projects = mutableStateListOf(
-        Project("project-1", "Proyecto Atlas", "Producto", "Deep Source", 10 * 60, 40 * 60),
-        Project("project-2", "App Boreal", "Mobile", "Nébula Labs", 25 * 60, 60 * 60),
-        Project("project-3", "Portal Nova", "Web", "Nova Retail", 50 * 60, 50 * 60),
-        Project("project-4", "Lumen CRM", "Research", "Lumen Co.", 75 * 60, 90 * 60)
+        Project(
+            id = "project-1",
+            name = "Proyecto Atlas",
+            description = "Producto",
+            client = "Deep Source",
+            registeredMinutes = 10 * 60,
+            totalMinutes = 40 * 60,
+            assignedUserIds = listOf("user-1", "user-2", "user-3")
+        ),
+
+        Project(
+            id = "project-2",
+            name = "App Boreal",
+            description = "Mobile",
+            client = "Nébula Labs",
+            registeredMinutes = 25 * 60,
+            totalMinutes = 60 * 60,
+            assignedUserIds = listOf("user-1", "user-2")
+        ),
+
+        Project(
+            id = "project-3",
+            name = "Portal Nova",
+            description = "Web",
+            client = "Nova Retail",
+            registeredMinutes = 50 * 60,
+            totalMinutes = 50 * 60,
+            assignedUserIds = listOf("user-1", "user-3")
+        ),
+
+        Project(
+            id = "project-4",
+            name = "Lumen CRM",
+            description = "Research",
+            client = "Lumen Co.",
+            registeredMinutes = 75 * 60,
+            totalMinutes = 90 * 60,
+            assignedUserIds = listOf("user-1")
+        )
     )
+
+    fun getProjectsForUser(userId: String): List<Project> {
+        return projects.filter { project ->
+            userId in project.assignedUserIds
+        }
+    }
 
     val timeEntries = mutableStateListOf(
         TimeEntry(id = "entry-1", projectId = "project-1", durationMinutes = 150, date = "2026-10-03", note = "Configuración inicial")

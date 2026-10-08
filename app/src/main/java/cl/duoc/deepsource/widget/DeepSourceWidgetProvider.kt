@@ -18,7 +18,7 @@ class DeepSourceWidgetProvider : AppWidgetProvider() {
     }
 
     private fun createViews(context: Context): RemoteViews = RemoteViews(context.packageName, R.layout.widget_deepsource).apply {
-        setTextViewText(R.id.widget_user, MockData.currentUser.name)
+        setTextViewText(R.id.widget_user, "DeepSource")
         removeAllViews(R.id.widget_projects)
         // Four rows is the deliberate visual contract of this widget. Keeping that
         // limit also prevents a long project list from making a launcher widget

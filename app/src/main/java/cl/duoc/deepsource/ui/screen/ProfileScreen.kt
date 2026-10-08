@@ -1,5 +1,6 @@
 package cl.duoc.deepsource.ui.screen
 
+import cl.duoc.deepsource.data.auth.AuthManager
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -56,7 +57,11 @@ private val ProfileAction = Color(0xFF2AAE9E)
 private val ProfileBorder = Color(0x26FFFFFF)
 
 @Composable
-fun ProfileScreen(onProjects: () -> Unit, onRegisterTime: () -> Unit) {
+fun ProfileScreen(
+    onProjects: () -> Unit,
+    onRegisterTime: () -> Unit,
+    onLogout: () -> Unit
+) {
     val completed = MockData.projects.take(3)
     Box(Modifier.fillMaxSize().background(ProfileSurface)) {
         ProfileAmbientBackground()
@@ -71,6 +76,22 @@ fun ProfileScreen(onProjects: () -> Unit, onRegisterTime: () -> Unit) {
                     ProfileOptions(completed.size)
                     Text("Proyectos finalizados", color = ProfileText, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 2.dp))
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) { completed.forEach { CompletedProjectCard(it) } }
+                    Spacer(Modifier.height(16.dp))
+
+                    Button(
+                        onClick = onLogout,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0x22FF5252),
+                            contentColor = Color(0xFFFF6B6B)
+                        )
+                    ) {
+                        Text(
+                            text = "Cerrar sesión",
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
             DeepSourceBottomNavigation(
@@ -119,17 +140,26 @@ private fun ProfileHeader() {
 @Composable
 private fun ProfileIdentity() {
     val shape = RoundedCornerShape(20.dp)
+    val user = AuthManager.currentUser.value ?: return
+
+    val initials = user.name
+        .split(" ")
+        .filter { it.isNotBlank() }
+        .take(2)
+        .joinToString("") { it.first().uppercase() }
+
     Row(
         modifier = Modifier.fillMaxWidth().height(90.dp).clip(shape).background(Color(0xB810214E)).border(1.dp, Color(0x3DFFFFFF), shape).padding(14.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(Modifier.size(54.dp).background(Color(0x2442C7B8), CircleShape).border(1.dp, Color(0x6642C7B8), CircleShape), contentAlignment = Alignment.Center) {
-            Text("MS", color = ProfileTeal, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+            Text(initials, color = ProfileTeal, fontSize = 17.sp, fontWeight = FontWeight.Bold)
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            Text("Marina Soto", color = ProfileText, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
-            Text(MockData.currentUser.email, color = ProfileMuted, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(user.name, color = ProfileText, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+            Text(user.email, color = ProfileMuted, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(text = user.role.name, color = ProfileTeal, fontSize = 12.sp, fontWeight = FontWeight.Bold)
         }
         Button(
             onClick = {},

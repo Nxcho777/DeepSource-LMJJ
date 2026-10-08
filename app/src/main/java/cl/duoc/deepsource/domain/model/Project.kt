@@ -6,7 +6,8 @@ data class Project(
     val description: String,
     val client: String,
     val registeredMinutes: Int,
-    val totalMinutes: Int
+    val totalMinutes: Int,
+    val assignedUserIds: List<String> = emptyList()
 ) {
     val status: ProjectStatus
         get() = ProjectStatus.fromMinutes(registeredMinutes, totalMinutes)
