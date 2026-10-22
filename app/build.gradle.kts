@@ -41,6 +41,7 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     implementation(libs.androidx.navigation.compose)
+    implementation("androidx.core:core-splashscreen:1.0.1")
 
     debugImplementation(libs.androidx.ui.tooling)
 }

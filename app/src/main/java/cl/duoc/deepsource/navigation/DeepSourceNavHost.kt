@@ -8,10 +8,24 @@ import cl.duoc.deepsource.ui.screen.LoginScreen
 import cl.duoc.deepsource.ui.screen.ProfileScreen
 import cl.duoc.deepsource.ui.screen.ProjectsScreen
 import cl.duoc.deepsource.ui.screen.RegisterTimeScreen
+import cl.duoc.deepsource.ui.screen.SplashScreen
 
 @Composable
-fun DeepSourceNavHost(navController: NavHostController, startDestination: String = AppDestination.Login.route) {
-    NavHost(navController = navController, startDestination = startDestination) {
+fun DeepSourceNavHost(
+    navController: NavHostController,
+    startDestination: String = AppDestination.Login.route
+) {
+    NavHost(navController = navController, startDestination = AppDestination.Splash.route) {
+        // Pantalla de Carga
+        composable(AppDestination.Splash.route) {
+            SplashScreen(
+                onSplashFinished = {
+                    navController.navigate(startDestination) {
+                        popUpTo(AppDestination.Splash.route) { inclusive = true }
+                    }
+                }
+            )
+        }
         composable(AppDestination.Login.route) {
             LoginScreen(onLogin = { navController.navigate(AppDestination.Projects.route) })
         }

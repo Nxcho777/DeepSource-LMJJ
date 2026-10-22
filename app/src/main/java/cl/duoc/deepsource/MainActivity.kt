@@ -1,5 +1,6 @@
 package cl.duoc.deepsource
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -7,16 +8,19 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import android.content.Intent
-import cl.duoc.deepsource.ui.DeepSourceApp
-import cl.duoc.deepsource.ui.theme.DeepSourceTheme
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import cl.duoc.deepsource.data.mock.MockData
 import cl.duoc.deepsource.navigation.AppDestination
+import cl.duoc.deepsource.ui.DeepSourceApp
+import cl.duoc.deepsource.ui.theme.DeepSourceTheme
 
 class MainActivity : ComponentActivity() {
     private var startDestination by mutableStateOf(AppDestination.Login.route)
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Inicializa la pantalla de carga nativa con fondo oscuro
+        installSplashScreen()
+
         super.onCreate(savedInstanceState)
         handleNavigationIntent(intent)
         setContent {
