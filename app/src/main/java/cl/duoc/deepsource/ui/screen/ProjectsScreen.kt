@@ -1,12 +1,10 @@
 package cl.duoc.deepsource.ui.screen
 
-
-import cl.duoc.deepsource.data.auth.AuthManager
-import cl.duoc.deepsource.domain.model.User
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -37,7 +35,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
@@ -47,6 +44,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import cl.duoc.deepsource.R
 import cl.duoc.deepsource.data.mock.MockData
 import cl.duoc.deepsource.domain.model.Project
@@ -64,10 +62,10 @@ private val GlassBorder = Color(0x26FFFFFF)
 
 @Composable
 fun ProjectsScreen(onRegisterTime: () -> Unit, onProfile: () -> Unit) {
-    val user = AuthManager.currentUser.value ?: return
-    val userProjects = MockData.getProjectsForUser(user.id)
     val selectedProjectId by MockData.selectedProjectId
     var statusLegendExpanded by remember { mutableStateOf(false) }
+
+    var projectForIconSelection by remember { mutableStateOf<Project?>(null) }
 
     Box(modifier = Modifier.fillMaxSize().background(ScreenBackground)) {
         ProjectsAmbientBackground()
@@ -75,27 +73,44 @@ fun ProjectsScreen(onRegisterTime: () -> Unit, onProfile: () -> Unit) {
             modifier = Modifier.fillMaxSize().statusBarsPadding(),
             contentPadding = PaddingValues(bottom = 136.dp)
         ) {
-            item { ProjectsHeader(user) }
+            item { ProjectsHeader() }
             item {
                 Column(
                     modifier = Modifier.padding(start = 16.dp, top = 20.dp, end = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    ProjectIntro(user)
+                    ProjectIntro()
                     ProjectFilter()
                     ProjectStatusLegend(statusLegendExpanded) { statusLegendExpanded = !statusLegendExpanded }
                 }
             }
             item { Spacer(Modifier.height(16.dp)) }
-            items(userProjects, key = { it.id }) { project ->
+            items(MockData.projects, key = { it.id }) { project ->
                 ProjectCard(
                     project = project,
                     selected = project.id == selectedProjectId,
-                    onClick = { MockData.selectedProjectId.value = project.id },
+                    onClick = {
+                        // Selecciona el proyecto activo y navega directamente al registro de horas
+                        MockData.selectedProjectId.value = project.id
+                        onRegisterTime()
+                    },
+                    onChangeIconClick = { projectForIconSelection = project },
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 5.5.dp)
                 )
             }
         }
+
+        projectForIconSelection?.let { projectToEdit ->
+            IconSelectorDialog(
+                currentIconRes = projectToEdit.iconRes,
+                onDismiss = { projectForIconSelection = null },
+                onIconSelected = { selectedIconRes ->
+                    MockData.updateProjectIcon(projectToEdit.id, selectedIconRes)
+                    projectForIconSelection = null
+                }
+            )
+        }
+
         DeepSourceBottomNavigation(
             activeTab = DeepSourceTab.Projects,
             onProjects = {},
@@ -110,26 +125,28 @@ fun ProjectsScreen(onRegisterTime: () -> Unit, onProfile: () -> Unit) {
 private fun ProjectsAmbientBackground() {
     Canvas(Modifier.fillMaxSize()) {
         drawCircle(
-            brush = Brush.radialGradient(listOf(Color(0x4D1EB9A8), Color.Transparent), Offset(size.width * .92f, -size.height * .02f), size.width * .82f),
-            radius = size.width * .82f,
-            center = Offset(size.width * .92f, -size.height * .02f)
+            brush = Brush.radialGradient(
+                colors = listOf(Color(0x4D1EB9A8), Color.Transparent),
+                center = Offset(size.width * 0.92f, -size.height * 0.02f),
+                radius = size.width * 0.82f
+            ),
+            radius = size.width * 0.82f,
+            center = Offset(size.width * 0.92f, -size.height * 0.02f)
         )
         drawCircle(
-            brush = Brush.radialGradient(listOf(Color(0x4D6D49DE), Color.Transparent), Offset(-size.width * .20f, size.height * .53f), size.width * 1.04f),
+            brush = Brush.radialGradient(
+                colors = listOf(Color(0x4D6D49DE), Color.Transparent),
+                center = Offset(-size.width * 0.20f, size.height * 0.53f),
+                radius = size.width * 1.04f
+            ),
             radius = size.width * 1.04f,
-            center = Offset(-size.width * .20f, size.height * .53f)
+            center = Offset(-size.width * 0.20f, size.height * 0.53f)
         )
     }
 }
 
 @Composable
-private fun ProjectsHeader(user: User) {
-    val initials = user.name
-        .split(" ")
-        .filter { it.isNotBlank() }
-        .take(2)
-        .joinToString("") { it.first().uppercase() }
-
+private fun ProjectsHeader() {
     Surface(
         modifier = Modifier.fillMaxWidth().height(72.dp),
         color = Color(0x08FFFFFF),
@@ -154,16 +171,16 @@ private fun ProjectsHeader(user: User) {
                 Box(
                     modifier = Modifier.size(38.dp).background(Color(0x2942C7B8), CircleShape).clip(CircleShape),
                     contentAlignment = Alignment.Center
-                ) { Text(initials, color = PrimaryTeal, fontWeight = FontWeight.Bold, fontSize = 13.sp) }
+                ) { Text("MS", color = PrimaryTeal, fontWeight = FontWeight.Bold, fontSize = 13.sp) }
             }
         }
     }
 }
 
 @Composable
-private fun ProjectIntro(user: User) {
+private fun ProjectIntro() {
     Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-        Text("ESPACIO DE ${user.name.substringBefore(" ").uppercase()}", color = PrimaryTeal, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        Text("ESPACIO DE MARINA", color = PrimaryTeal, fontSize = 12.sp, fontWeight = FontWeight.Bold)
         Text("Selecciona un proyecto", color = MainText, fontSize = 28.sp, lineHeight = 34.sp)
         Text("El proyecto activo se usará en tu próximo registro de horario.", color = MutedText, fontSize = 13.sp, lineHeight = 19.sp)
     }
@@ -231,26 +248,13 @@ private fun StatusLegendItem(status: ProjectStatus, modifier: Modifier = Modifie
 }
 
 @Composable
-private fun InfoGlyph() {
-    Canvas(Modifier.size(13.dp)) {
-        drawCircle(PrimaryTeal, size.minDimension * .42f, style = Stroke(1.5.dp.toPx()))
-        drawCircle(PrimaryTeal, size.minDimension * .07f, Offset(size.width / 2, size.height * .32f))
-        drawLine(PrimaryTeal, Offset(size.width / 2, size.height * .47f), Offset(size.width / 2, size.height * .70f), 1.5.dp.toPx(), StrokeCap.Round)
-    }
-}
-
-@Composable
-private fun LegendChevron(expanded: Boolean) {
-    Canvas(Modifier.size(18.dp).padding(start = 5.dp)) {
-        val top = if (expanded) .60f else .38f
-        val bottom = if (expanded) .38f else .60f
-        drawLine(PrimaryTeal, Offset(size.width * .28f, top * size.height), Offset(size.width * .50f, bottom * size.height), 1.7.dp.toPx(), StrokeCap.Round)
-        drawLine(PrimaryTeal, Offset(size.width * .50f, bottom * size.height), Offset(size.width * .72f, top * size.height), 1.7.dp.toPx(), StrokeCap.Round)
-    }
-}
-
-@Composable
-fun ProjectCard(project: Project, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun ProjectCard(
+    project: Project,
+    selected: Boolean,
+    onClick: () -> Unit,
+    onChangeIconClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     val accent = Color(project.status.color)
     val cardShape = RoundedCornerShape(20.dp)
     Surface(
@@ -262,14 +266,24 @@ fun ProjectCard(project: Project, selected: Boolean, onClick: () -> Unit, modifi
     ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                ProjectStatusIcon(accent)
-                Column(Modifier.weight(1f).padding(start = 12.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                ProjectStatusIcon(
+                    accent = accent,
+                    iconRes = project.iconRes,
+                    onIconClick = onChangeIconClick
+                )
+
+                Column(
+                    modifier = Modifier.weight(1f).padding(start = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(3.dp)
+                ) {
                     Text(project.name, color = MainText, fontSize = 17.sp, lineHeight = 21.sp)
                     Text("${project.client} · ${project.description}", color = MutedText, fontSize = 12.sp)
                 }
                 if (selected) {
                     Box(Modifier.size(28.dp).background(ActiveTeal, CircleShape), contentAlignment = Alignment.Center) { CheckGlyph() }
-                } else ChevronGlyph()
+                } else {
+                    ChevronGlyph()
+                }
             }
             Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -288,12 +302,137 @@ fun ProjectCard(project: Project, selected: Boolean, onClick: () -> Unit, modifi
 }
 
 @Composable
-private fun ProjectStatusIcon(accent: Color) {
-    Canvas(Modifier.size(38.dp)) {
-        drawCircle(accent.copy(alpha = .18f), size.minDimension / 2)
-        drawCircle(accent, size.minDimension * .12f, Offset(size.width * .33f, size.height * .35f))
-        drawCircle(accent, size.minDimension * .12f, Offset(size.width * .65f, size.height * .35f))
-        drawCircle(accent, size.minDimension * .12f, Offset(size.width * .50f, size.height * .66f))
+private fun ProjectStatusIcon(
+    accent: Color,
+    iconRes: Int? = null,
+    onIconClick: () -> Unit = {}
+) {
+    Box(
+        modifier = Modifier
+            .size(44.dp)
+            .clip(CircleShape)
+            .clickable { onIconClick() }
+            .background(accent.copy(alpha = 0.28f))
+            .border(1.dp, accent.copy(alpha = 0.6f), CircleShape)
+            .padding(5.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        if (iconRes != null) {
+            Image(
+                painter = painterResource(id = iconRes),
+                contentDescription = "Cambiar icono",
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(CircleShape)
+            )
+        } else {
+            Canvas(Modifier.fillMaxSize()) {
+                drawCircle(accent, size.minDimension * 0.12f, Offset(size.width * 0.33f, size.height * 0.35f))
+                drawCircle(accent, size.minDimension * 0.12f, Offset(size.width * 0.65f, size.height * 0.35f))
+                drawCircle(accent, size.minDimension * 0.12f, Offset(size.width * 0.50f, size.height * 0.66f))
+            }
+        }
+    }
+}
+
+@Composable
+private fun IconSelectorDialog(
+    currentIconRes: Int?,
+    onDismiss: () -> Unit,
+    onIconSelected: (Int) -> Unit
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = Color(0xFF101628),
+            border = BorderStroke(1.dp, GlassBorder),
+            shadowElevation = 12.dp
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Selecciona un icono",
+                    color = MainText,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "Personaliza el aspecto del proyecto",
+                    color = MutedText,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(top = 4.dp, bottom = 20.dp)
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    MockData.availableIcons.forEach { iconRes ->
+                        val isSelected = iconRes == currentIconRes
+                        Box(
+                            modifier = Modifier
+                                .size(56.dp)
+                                .clip(CircleShape)
+                                .background(if (isSelected) PrimaryTeal.copy(alpha = 0.2f) else Color(0x12FFFFFF))
+                                .border(
+                                    width = if (isSelected) 2.dp else 1.dp,
+                                    color = if (isSelected) PrimaryTeal else Color.Transparent,
+                                    shape = CircleShape
+                                )
+                                .clickable { onIconSelected(iconRes) }
+                                .padding(4.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Image(
+                                painter = painterResource(id = iconRes),
+                                contentDescription = "Icono de proyecto",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(CircleShape)
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                Text(
+                    text = "Cancelar",
+                    color = MutedText,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier
+                        .clickable { onDismiss() }
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun InfoGlyph() {
+    Canvas(Modifier.size(13.dp)) {
+        drawCircle(PrimaryTeal, size.minDimension * 0.42f, style = Stroke(1.5.dp.toPx()))
+        drawCircle(PrimaryTeal, size.minDimension * 0.07f, Offset(size.width / 2, size.height * 0.32f))
+        drawLine(PrimaryTeal, Offset(size.width / 2, size.height * 0.47f), Offset(size.width / 2, size.height * 0.70f), 1.5.dp.toPx(), StrokeCap.Round)
+    }
+}
+
+@Composable
+private fun LegendChevron(expanded: Boolean) {
+    Canvas(Modifier.size(18.dp).padding(start = 5.dp)) {
+        val top = if (expanded) 0.60f else 0.38f
+        val bottom = if (expanded) 0.38f else 0.60f
+        drawLine(PrimaryTeal, Offset(size.width * 0.28f, top * size.height), Offset(size.width * 0.50f, bottom * size.height), 1.7.dp.toPx(), StrokeCap.Round)
+        drawLine(PrimaryTeal, Offset(size.width * 0.50f, bottom * size.height), Offset(size.width * 0.72f, top * size.height), 1.7.dp.toPx(), StrokeCap.Round)
     }
 }
 
@@ -301,24 +440,23 @@ private fun ProjectStatusIcon(accent: Color) {
 private fun SearchGlyph() {
     Canvas(Modifier.size(19.dp)) {
         val stroke = 1.8.dp.toPx()
-        drawCircle(Color(0xFFF7FAFF), size.minDimension * .29f, Offset(size.width * .43f, size.height * .43f), style = Stroke(stroke))
-        drawLine(Color(0xFFF7FAFF), Offset(size.width * .62f, size.height * .62f), Offset(size.width * .87f, size.height * .87f), stroke, StrokeCap.Round)
+        drawCircle(Color(0xFFF7FAFF), size.minDimension * 0.29f, Offset(size.width * 0.43f, size.height * 0.43f), style = Stroke(stroke))
+        drawLine(Color(0xFFF7FAFF), Offset(size.width * 0.62f, size.height * 0.62f), Offset(size.width * 0.87f, size.height * 0.87f), stroke, StrokeCap.Round)
     }
 }
 
 @Composable
 private fun CheckGlyph() {
     Canvas(Modifier.size(15.dp)) {
-        drawLine(Color.White, Offset(size.width * .20f, size.height * .52f), Offset(size.width * .43f, size.height * .73f), 2.dp.toPx(), StrokeCap.Round)
-        drawLine(Color.White, Offset(size.width * .43f, size.height * .73f), Offset(size.width * .80f, size.height * .28f), 2.dp.toPx(), StrokeCap.Round)
+        drawLine(Color.White, Offset(size.width * 0.20f, size.height * 0.52f), Offset(size.width * 0.43f, size.height * 0.73f), 2.dp.toPx(), StrokeCap.Round)
+        drawLine(Color.White, Offset(size.width * 0.43f, size.height * 0.73f), Offset(size.width * 0.80f, size.height * 0.28f), 2.dp.toPx(), StrokeCap.Round)
     }
 }
 
 @Composable
 private fun ChevronGlyph() {
     Canvas(Modifier.size(20.dp)) {
-        drawLine(MutedText, Offset(size.width * .38f, size.height * .22f), Offset(size.width * .64f, size.height * .50f), 1.8.dp.toPx(), StrokeCap.Round)
-        drawLine(MutedText, Offset(size.width * .64f, size.height * .50f), Offset(size.width * .38f, size.height * .78f), 1.8.dp.toPx(), StrokeCap.Round)
+        drawLine(MutedText, Offset(size.width * 0.38f, size.height * 0.22f), Offset(size.width * 0.64f, size.height * 0.50f), 1.8.dp.toPx(), StrokeCap.Round)
+        drawLine(MutedText, Offset(size.width * 0.64f, size.height * 0.50f), Offset(size.width * 0.38f, size.height * 0.78f), 1.8.dp.toPx(), StrokeCap.Round)
     }
 }
-

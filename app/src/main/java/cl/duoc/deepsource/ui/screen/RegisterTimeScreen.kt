@@ -1,8 +1,6 @@
 package cl.duoc.deepsource.ui.screen
-import cl.duoc.deepsource.data.auth.AuthManager
+
 import android.app.DatePickerDialog
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -84,12 +82,10 @@ private val RegisterBorder = Color(0x26FFFFFF)
 
 private enum class DurationPickerStep { Hours, Minutes }
 
-@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun RegisterTimeScreen(onProjects: () -> Unit, onProfile: () -> Unit) {
-    val currentUser = AuthManager.currentUser.value ?: return
     val context = LocalContext.current
-    var userId by remember { mutableStateOf(currentUser.id) }
+    var userId by remember { mutableStateOf(MockData.currentUser.id) }
     var projectId by remember { mutableStateOf(MockData.selectedProjectId.value) }
     var date by remember { mutableStateOf(LocalDate.now()) }
     var hours by remember { mutableStateOf("00") }
@@ -108,7 +104,7 @@ fun RegisterTimeScreen(onProjects: () -> Unit, onProfile: () -> Unit) {
     val valid = hoursValue?.let { it in 0..23 } == true &&
         minutesValue?.let { it in 0..59 } == true && durationMinutes > 0 && task.isNotBlank()
     val project = MockData.projects.firstOrNull { it.id == projectId } ?: MockData.projects.first()
-    val user = MockData.users.firstOrNull { it.id == userId } ?: currentUser
+    val user = MockData.users.firstOrNull { it.id == userId } ?: MockData.currentUser
     val openDurationPicker = {
         pendingHours = (hours.toIntOrNull() ?: 0).coerceIn(0, 23)
         pendingMinutes = (minutes.toIntOrNull() ?: 0).coerceIn(0, 59)
@@ -336,7 +332,6 @@ private fun ProjectPicker(project: Project, expanded: Boolean, onToggle: () -> U
     }
 }
 
-@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 private fun DateField(date: LocalDate, onClick: () -> Unit) {
     val formatter = remember { DateTimeFormatter.ofPattern("EEE, dd MMM yyyy", Locale("es", "CL")) }

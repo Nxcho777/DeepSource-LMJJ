@@ -1,7 +1,5 @@
 package cl.duoc.deepsource.ui.screen
 
-import cl.duoc.deepsource.data.auth.AuthManager
-
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -66,7 +64,6 @@ private val InputBorder = Color(0x26FFFFFF)
 fun LoginScreen(onLogin: () -> Unit) {
     var username by remember { mutableStateOf("marina.soto@deepsource.cl") }
     var password by remember { mutableStateOf("deepsource") }
-    var loginError by remember { mutableStateOf(false) }
     var passwordVisible by remember { mutableStateOf(false) }
     var rememberMe by remember { mutableStateOf(true) }
 
@@ -98,44 +95,15 @@ fun LoginScreen(onLogin: () -> Unit) {
                 Spacer(Modifier.height(36.dp))
                 LoginCard(
                     username = username,
-                    onUsernameChange = {
-                        username = it
-                        loginError = false
-                    },
+                    onUsernameChange = { username = it },
                     password = password,
-                    onPasswordChange = {
-                        password = it
-                        loginError = false
-                    },
+                    onPasswordChange = { password = it },
                     passwordVisible = passwordVisible,
                     onPasswordVisibilityChange = { passwordVisible = !passwordVisible },
                     rememberMe = rememberMe,
                     onRememberMeChange = { rememberMe = it },
-                    onLogin = {
-                        loginError = !AuthManager.login(
-                            email = username,
-                            password = password
-                        )
-
-                        if (!loginError) {
-                            onLogin()
-                        }
-                    }
+                    onLogin = onLogin
                 )
-
-                if (loginError) {
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Text(
-                        text = "Correo o contraseña incorrectos",
-                        color = Color(0xFFFF6B6B),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-
-                Spacer(Modifier.height(26.dp))
-                LoginSecurityFooter()
                 Spacer(Modifier.height(26.dp))
                 LoginSecurityFooter()
             }
