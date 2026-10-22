@@ -1,5 +1,7 @@
 package cl.duoc.deepsource.domain.model
 
+import androidx.annotation.DrawableRes
+
 data class Project(
     val id: String,
     val name: String,
@@ -7,7 +9,7 @@ data class Project(
     val client: String,
     val registeredMinutes: Int,
     val totalMinutes: Int,
-    val assignedUserIds: List<String> = emptyList()
+    @DrawableRes val iconRes: Int? = null // Icono personalizado opcional
 ) {
     val status: ProjectStatus
         get() = ProjectStatus.fromMinutes(registeredMinutes, totalMinutes)
@@ -23,10 +25,7 @@ data class Project(
 }
 
 /**
- * Shared visual meaning for a project's time status.
- *
- * The ARGB values intentionally live next to the semantic state so Compose and
- * the traditional RemoteViews widget cannot drift apart.
+ * Representación visual del estado del proyecto según minutos registrados.
  */
 enum class ProjectStatus(val label: String, val color: Long) {
     Initial("Inicial", 0xFF20EAA7),
