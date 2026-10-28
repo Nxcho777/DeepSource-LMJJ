@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 1. Fondo base azul profundo (DeepNavy) -->
+    <item>
+        <color android:color="#070C1E" />
+    </item>
+
+    <!-- 2. Resplandor verde/turquesa estático en la zona central -->
+    <item>
+        <shape android:shape="rectangle">
+            <gradient
+                android:type="radial"
+                android:gradientRadius="350dp"
+                android:centerX="50%"
+                android:centerY="45%"
+                android:startColor="#4D00D29E"
+                android:endColor="#00070C1E" />
+        </shape>
+    </item>
+</layer-list>

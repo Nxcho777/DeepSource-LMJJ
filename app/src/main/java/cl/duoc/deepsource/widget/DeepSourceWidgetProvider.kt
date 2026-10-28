@@ -20,9 +20,6 @@ class DeepSourceWidgetProvider : AppWidgetProvider() {
     private fun createViews(context: Context): RemoteViews = RemoteViews(context.packageName, R.layout.widget_deepsource).apply {
         setTextViewText(R.id.widget_user, MockData.currentUser.name)
         removeAllViews(R.id.widget_projects)
-        // Four rows is the deliberate visual contract of this widget. Keeping that
-        // limit also prevents a long project list from making a launcher widget
-        // unexpectedly tall.
         MockData.projects.take(MAX_VISIBLE_PROJECTS).forEach { project ->
             val row = RemoteViews(context.packageName, R.layout.widget_project_row)
             row.setTextViewText(R.id.widget_project_name, project.name)
@@ -42,7 +39,12 @@ class DeepSourceWidgetProvider : AppWidgetProvider() {
             putExtra(MainActivity.EXTRA_DESTINATION, AppDestination.RegisterTime.route)
             projectId?.let { putExtra(MainActivity.EXTRA_PROJECT_ID, it) }
         }
-        return PendingIntent.getActivity(context, projectId?.hashCode() ?: 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        return PendingIntent.getActivity(
+            context,
+            projectId?.hashCode() ?: 0,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
     }
 
     companion object {

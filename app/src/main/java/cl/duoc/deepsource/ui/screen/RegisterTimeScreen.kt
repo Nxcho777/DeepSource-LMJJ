@@ -1,546 +1,711 @@
 package cl.duoc.deepsource.ui.screen
 
-import android.app.DatePickerDialog
-import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Assignment
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.GridView
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
+
 import cl.duoc.deepsource.R
-import cl.duoc.deepsource.data.mock.MockData
-import cl.duoc.deepsource.domain.model.Project
-import cl.duoc.deepsource.domain.model.User
-import cl.duoc.deepsource.widget.DeepSourceWidgetProvider
-import cl.duoc.deepsource.ui.component.DeepSourceBottomNavigation
-import cl.duoc.deepsource.ui.component.DeepSourceTab
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
-import java.util.Locale
-import kotlin.math.abs
 
-private val RegisterSurface = Color(0xFF080D1C)
-private val RegisterText = Color(0xFFF7FAFF)
-private val RegisterMuted = Color(0xFFAEB9D0)
-private val RegisterSubtle = Color(0xFF7D8AA7)
-private val RegisterTeal = Color(0xFF42C7B8)
-private val RegisterAction = Color(0xFF2AAE9E)
-private val RegisterBorder = Color(0x26FFFFFF)
+private object RegisterTheme {
+    val DarkGradientTop = Color(0xFF0D1B2A)
+    val DarkGradientCenter = Color(0xFF1B263B)
+    val DarkGradientBottom = Color(0xFF0D1117)
 
-private enum class DurationPickerStep { Hours, Minutes }
+    val CardBackground = Color(0xFF161F2E).copy(alpha = 0.85f)
+    val CardBorder = Color(0xFF28354A)
+    val InputBackground = Color(0xFF1E2A3A)
+
+    val AccentTeal = Color(0xFF1ABC9C)
+    val TextPrimary = Color(0xFFFFFFFF)
+    val TextSecondary = Color(0xFF94A3B8)
+}
+
+private data class SelectedProjectData(
+    val name: String,
+    val clientAndType: String,
+    val iconRes: Int,
+    val accentColor: Color
+)
 
 @Composable
-fun RegisterTimeScreen(onProjects: () -> Unit, onProfile: () -> Unit) {
-    val context = LocalContext.current
-    var userId by remember { mutableStateOf(MockData.currentUser.id) }
-    var projectId by remember { mutableStateOf(MockData.selectedProjectId.value) }
-    var date by remember { mutableStateOf(LocalDate.now()) }
-    var hours by remember { mutableStateOf("00") }
-    var minutes by remember { mutableStateOf("00") }
-    var task by remember { mutableStateOf("") }
-    var savedMessage by remember { mutableStateOf<String?>(null) }
-    var userPickerOpen by remember { mutableStateOf(false) }
-    var projectPickerOpen by remember { mutableStateOf(false) }
-    var durationPickerOpen by remember { mutableStateOf(false) }
-    var durationPickerStep by remember { mutableStateOf(DurationPickerStep.Hours) }
-    var pendingHours by remember { mutableStateOf(0) }
-    var pendingMinutes by remember { mutableStateOf(0) }
-    val hoursValue = hours.toIntOrNull()
-    val minutesValue = minutes.toIntOrNull()
-    val durationMinutes = (hoursValue ?: 0) * 60 + (minutesValue ?: 0)
-    val valid = hoursValue?.let { it in 0..23 } == true &&
-        minutesValue?.let { it in 0..59 } == true && durationMinutes > 0 && task.isNotBlank()
-    val project = MockData.projects.firstOrNull { it.id == projectId } ?: MockData.projects.first()
-    val user = MockData.users.firstOrNull { it.id == userId } ?: MockData.currentUser
-    val openDurationPicker = {
-        pendingHours = (hours.toIntOrNull() ?: 0).coerceIn(0, 23)
-        pendingMinutes = (minutes.toIntOrNull() ?: 0).coerceIn(0, 59)
-        durationPickerStep = DurationPickerStep.Hours
-        durationPickerOpen = true
-    }
+fun RegisterTimeScreen(
+    projectId: String = "1",
+    onProjects: () -> Unit = {},
+    onProfile: () -> Unit = {},
+    onSaveSuccess: () -> Unit = {}
+) {
+    val projectsMap = mapOf(
+        "1" to SelectedProjectData("Proyecto Atlas", "Deep Source · Producto", R.drawable.ic_icono_1, RegisterTheme.AccentTeal),
+        "2" to SelectedProjectData("App Boreal", "Nébula Labs · Mobile", R.drawable.ic_icono_2, Color(0xFFEAB308)),
+        "3" to SelectedProjectData("Portal Nova", "Nova Retail · Web", R.drawable.ic_icono_3, Color(0xFF06B6D4)),
+        "4" to SelectedProjectData("Lumen CRM", "Lumen Co. · Research", R.drawable.ic_icono_4, Color(0xFFEF4444))
+    )
 
-    Box(Modifier.fillMaxSize().background(RegisterSurface)) {
-        RegisterAmbientBackground()
-        Column(Modifier.fillMaxSize().statusBarsPadding()) {
-            RegisterHeader()
+    val currentProject = projectsMap[projectId] ?: projectsMap["1"]!!
+
+    var selectedUser by remember { mutableStateOf("Juan Pérez") }
+    var selectedUserEmail by remember { mutableStateOf("juan@duoc.cl") }
+    var userDropdownExpanded by remember { mutableStateOf(false) }
+
+    var selectedDate by remember { mutableStateOf("mié, 28 oct 2026") }
+    var selectedHours by remember { mutableStateOf("00") }
+    var selectedMinutes by remember { mutableStateOf("00") }
+    var taskName by remember { mutableStateOf("") }
+
+    var hoursDropdownExpanded by remember { mutableStateOf(false) }
+    var minutesDropdownExpanded by remember { mutableStateOf(false) }
+
+    val hoursList = (0..12).map { it.toString().padStart(2, '0') }
+    val minutesList = listOf("00", "15", "30", "45")
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        RegisterTheme.DarkGradientTop,
+                        RegisterTheme.DarkGradientCenter,
+                        RegisterTheme.DarkGradientBottom
+                    )
+                )
+            )
+    ) {
+        Scaffold(
+            containerColor = Color.Transparent,
+            bottomBar = {
+                RegisterBottomNavigationBar(
+                    selectedTab = "Registro",
+                    onProjectsClick = onProjects,
+                    onRegisterClick = { },
+                    onProfileClick = onProfile
+                )
+            }
+        ) { innerPadding ->
             Column(
                 modifier = Modifier
-                    .weight(1f)
+                    .fillMaxSize()
+                    .padding(innerPadding)
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp, vertical = 18.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                Column(Modifier.widthIn(max = 440.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("NUEVO REGISTRO", color = RegisterTeal, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        Text("Registra tus horas", color = RegisterText, fontSize = 28.sp, lineHeight = 34.sp)
-                    }
-                    UserPicker(user, userPickerOpen, onToggle = { userPickerOpen = !userPickerOpen }) { selected ->
-                        userId = selected.id
-                        userPickerOpen = false
-                    }
-                    ProjectPicker(project, projectPickerOpen, onToggle = { projectPickerOpen = !projectPickerOpen }) { selected ->
-                        projectId = selected.id
-                        MockData.selectedProjectId.value = selected.id
-                        projectPickerOpen = false
-                    }
-                    DateField(date) {
-                        DatePickerDialog(context, { _, year, month, day ->
-                            date = LocalDate.of(year, month + 1, day)
-                        }, date.year, date.monthValue - 1, date.dayOfMonth).show()
-                    }
-                    DurationFields(hours, minutes, openDurationPicker)
-                    DurationSummary(hours, minutes)
-                    RegisterTextField("Nombre de la tarea", task, { task = it }, Modifier.fillMaxWidth(), KeyboardType.Text, FieldIcon.Task)
-                    savedMessage?.let { Text(it, color = RegisterTeal, fontSize = 12.sp, fontWeight = FontWeight.SemiBold) }
-                    Button(
-                        onClick = {
-                            MockData.addTimeEntry(project.id, durationMinutes, date.toString(), task.trim())
-                            MockData.selectedProjectId.value = project.id
-                            DeepSourceWidgetProvider.requestRefresh(context)
-                            savedMessage = "Registro guardado: ${durationMinutes.toDurationLabel()} añadidos a ${project.name}."
-                            hours = "00"
-                            minutes = "00"
-                            task = ""
-                        },
-                        enabled = valid,
-                        modifier = Modifier.fillMaxWidth().height(54.dp),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = RegisterAction,
-                            contentColor = Color.White,
-                            disabledContainerColor = Color(0xFF365B61),
-                            disabledContentColor = Color(0xFFAEB9D0)
-                        )
-                    ) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text("Guardar registro", fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                            CheckGlyph()
-                        }
-                    }
-                }
-            }
-            DeepSourceBottomNavigation(
-                activeTab = DeepSourceTab.Register,
-                onProjects = onProjects,
-                onRegister = {},
-                onProfile = onProfile
-            )
-        }
-        if (durationPickerOpen) {
-            Dialog(onDismissRequest = { durationPickerOpen = false }) {
-                val dialogShape = RoundedCornerShape(24.dp)
-                Surface(
+
+                // 1. Top Bar Custom
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    color = Color.Transparent,
-                    contentColor = RegisterText,
-                    shape = dialogShape,
-                    shadowElevation = 2.dp
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.deepsource_logo),
+                        contentDescription = "Logo",
+                        modifier = Modifier
+                            .height(44.dp)
+                            .width(140.dp),
+                        contentScale = ContentScale.Fit
+                    )
+
                     Box(
-                        Modifier
-                            .fillMaxWidth()
-                            .clip(dialogShape)
-                            .background(Color(0xFF0C1529), dialogShape)
-                            .border(1.dp, RegisterBorder, dialogShape)
+                        modifier = Modifier
+                            .background(
+                                color = RegisterTheme.AccentTeal.copy(alpha = 0.15f),
+                                shape = RoundedCornerShape(50)
+                            )
+                            .border(
+                                width = 1.dp,
+                                color = RegisterTheme.AccentTeal.copy(alpha = 0.4f),
+                                shape = RoundedCornerShape(50)
+                            )
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
                     ) {
-                        DurationPickerDialog(
-                            step = durationPickerStep,
-                            hours = pendingHours,
-                            minutes = pendingMinutes,
-                            onHoursChange = { pendingHours = it },
-                            onMinutesChange = { pendingMinutes = it },
-                            onCancel = { durationPickerOpen = false },
-                            onContinue = { durationPickerStep = DurationPickerStep.Minutes },
-                            onBack = { durationPickerStep = DurationPickerStep.Hours },
-                            onConfirm = {
-                                hours = pendingHours.toPickerValue()
-                                minutes = pendingMinutes.toPickerValue()
-                                durationPickerOpen = false
-                            }
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Schedule,
+                                contentDescription = null,
+                                tint = RegisterTheme.AccentTeal,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = "3 h 30 min hoy",
+                                color = RegisterTheme.AccentTeal,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
                     }
                 }
-            }
-        }
-    }
-}
 
-@Composable
-private fun RegisterAmbientBackground() {
-    Canvas(Modifier.fillMaxSize()) {
-        drawCircle(
-            brush = Brush.radialGradient(listOf(Color(0x462E73E6), Color.Transparent), Offset(size.width * 1.05f, -size.height * .05f), size.width * .90f),
-            radius = size.width * .90f,
-            center = Offset(size.width * 1.05f, -size.height * .05f)
-        )
-        drawCircle(
-            brush = Brush.radialGradient(listOf(Color(0x4A4F33C4), Color.Transparent), Offset(-size.width * .22f, size.height * .56f), size.width),
-            radius = size.width,
-            center = Offset(-size.width * .22f, size.height * .56f)
-        )
-    }
-}
-
-@Composable
-private fun RegisterHeader() {
-    Row(
-        modifier = Modifier.fillMaxWidth().height(72.dp).background(Color(0x08FFFFFF)).border(1.dp, Color.Transparent).padding(horizontal = 20.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        androidx.compose.foundation.Image(
-            painter = painterResource(R.drawable.deepsource_logo),
-            contentDescription = "Deep Source",
-            modifier = Modifier.width(108.dp).height(33.dp),
-            contentScale = ContentScale.Fit
-        )
-        Row(
-            Modifier.height(34.dp).clip(CircleShape).background(Color(0x1F42C7B8)).border(1.dp, Color(0x4D42C7B8), CircleShape).padding(horizontal = 12.dp),
-            horizontalArrangement = Arrangement.spacedBy(7.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            TimerGlyph(16.dp, RegisterTeal)
-            Text("3 h 30 min hoy", color = RegisterTeal, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-        }
-    }
-}
-
-@Composable
-private fun UserPicker(user: User, expanded: Boolean, onToggle: () -> Unit, onUserSelected: (User) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
-        Text("Usuario", color = RegisterMuted, fontSize = 12.sp)
-        Row(
-            Modifier.fillMaxWidth().height(58.dp).clip(RoundedCornerShape(14.dp)).background(Color(0x12FFFFFF)).border(1.dp, RegisterBorder, RoundedCornerShape(14.dp)).clickable(onClick = onToggle).padding(horizontal = 14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            Box(Modifier.size(30.dp).background(Color(0x1A42C7B8), CircleShape), contentAlignment = Alignment.Center) {
-                Text(user.name.split(" ").take(2).joinToString("") { it.first().toString() }, color = RegisterTeal, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-            }
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                Text(user.name, color = RegisterText, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                Text(user.email, color = RegisterMuted, fontSize = 11.sp)
-            }
-            DownGlyph()
-        }
-        if (expanded) {
-            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Color(0x12FFFFFF)).border(1.dp, RegisterBorder, RoundedCornerShape(14.dp))) {
-                MockData.users.forEach { item ->
-                    Row(
-                        Modifier.fillMaxWidth().clickable { onUserSelected(item) }.padding(horizontal = 14.dp, vertical = 10.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(Modifier.size(28.dp).background(if (item.id == user.id) Color(0x1A42C7B8) else Color(0x12FFFFFF), CircleShape), contentAlignment = Alignment.Center) {
-                            Text(item.name.split(" ").take(2).joinToString("") { it.first().toString() }, color = if (item.id == user.id) RegisterTeal else RegisterMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                        }
-                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                            Text(item.name, color = if (item.id == user.id) RegisterTeal else RegisterText, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                            Text(item.email, color = RegisterMuted, fontSize = 10.sp)
-                        }
-                        if (item.id == user.id) CheckGlyph()
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ProjectPicker(project: Project, expanded: Boolean, onToggle: () -> Unit, onProjectSelected: (Project) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
-        Text("Proyecto", color = RegisterMuted, fontSize = 12.sp)
-        Row(
-            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(Color(0x1939BFAF)).border(1.dp, RegisterTeal, RoundedCornerShape(20.dp)).clickable(onClick = onToggle).padding(14.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            ProjectSymbol(Color(project.status.color))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text("PROYECTO SELECCIONADO", color = RegisterMuted, fontWeight = FontWeight.Bold, fontSize = 10.sp)
-                Text(project.name, color = RegisterText, fontSize = 17.sp)
-                Text("${project.client} · ${project.description}", color = RegisterSubtle, fontSize = 12.sp)
-            }
-            ChevronGlyph()
-        }
-        if (expanded) {
-            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Color(0x12FFFFFF)).border(1.dp, RegisterBorder, RoundedCornerShape(14.dp))) {
-                MockData.projects.forEach { item ->
+                // 2. Encabezado
+                Column {
                     Text(
-                        item.name,
-                        color = if (item.id == project.id) RegisterTeal else RegisterText,
-                        fontSize = 14.sp,
-                        modifier = Modifier.fillMaxWidth().clickable { onProjectSelected(item) }.padding(horizontal = 14.dp, vertical = 11.dp)
+                        text = "NUEVO REGISTRO",
+                        color = RegisterTheme.AccentTeal,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.sp
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Registra tus horas",
+                        color = RegisterTheme.TextPrimary,
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold
                     )
                 }
-            }
-        }
-    }
-}
 
-@Composable
-private fun DateField(date: LocalDate, onClick: () -> Unit) {
-    val formatter = remember { DateTimeFormatter.ofPattern("EEE, dd MMM yyyy", Locale("es", "CL")) }
-    Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
-        Text("Fecha", color = RegisterMuted, fontSize = 12.sp)
-        Row(
-            modifier = Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(14.dp)).background(Color(0x12FFFFFF)).border(1.dp, RegisterBorder, RoundedCornerShape(14.dp)).clickable(onClick = onClick).padding(horizontal = 14.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            CalendarGlyph()
-            Text(date.format(formatter), color = RegisterText, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-            DownGlyph()
-        }
-    }
-}
+                // 3. Campo Usuario
+                Column {
+                    Text(
+                        text = "Usuario",
+                        color = RegisterTheme.TextSecondary,
+                        fontSize = 13.sp,
+                        modifier = Modifier.padding(bottom = 6.dp)
+                    )
 
-private enum class FieldIcon { Task, None }
+                    Box {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(RegisterTheme.CardBackground, RoundedCornerShape(16.dp))
+                                .border(1.dp, RegisterTheme.CardBorder, RoundedCornerShape(16.dp))
+                                .clickable { userDropdownExpanded = true }
+                                .padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .background(Color(0xFF164E5B), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = if (selectedUser.contains("Marina")) "MS" else "JP",
+                                        color = RegisterTheme.AccentTeal,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp
+                                    )
+                                }
 
-@Composable
-private fun RegisterTextField(label: String, value: String, onValueChange: (String) -> Unit, modifier: Modifier, keyboardType: KeyboardType, icon: FieldIcon = FieldIcon.None) {
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(7.dp)) {
-        Text(label, color = RegisterMuted, fontSize = 12.sp)
-        BasicTextField(
-            value = value,
-            onValueChange = onValueChange,
-            modifier = Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(14.dp)).background(Color(0x12FFFFFF)).border(1.dp, RegisterBorder, RoundedCornerShape(14.dp)),
-            textStyle = TextStyle(color = RegisterText, fontSize = 15.sp),
-            cursorBrush = SolidColor(RegisterText),
-            singleLine = true,
-            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = keyboardType),
-            decorationBox = { inner ->
-                Row(Modifier.fillMaxSize().padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    when (icon) {
-                        FieldIcon.Task -> TaskGlyph()
-                        FieldIcon.None -> Unit
+                                Column {
+                                    Text(
+                                        text = selectedUser,
+                                        color = RegisterTheme.TextPrimary,
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        text = selectedUserEmail,
+                                        color = RegisterTheme.TextSecondary,
+                                        fontSize = 12.sp
+                                    )
+                                }
+                            }
+
+                            Icon(
+                                imageVector = Icons.Default.KeyboardArrowDown,
+                                contentDescription = null,
+                                tint = RegisterTheme.TextSecondary
+                            )
+                        }
+
+                        DropdownMenu(
+                            expanded = userDropdownExpanded,
+                            onDismissRequest = { userDropdownExpanded = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Juan Pérez (juan@duoc.cl)") },
+                                onClick = {
+                                    selectedUser = "Juan Pérez"
+                                    selectedUserEmail = "juan@duoc.cl"
+                                    userDropdownExpanded = false
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Marina Soto (marina.soto@deepsource.cl)") },
+                                onClick = {
+                                    selectedUser = "Marina Soto"
+                                    selectedUserEmail = "marina.soto@deepsource.cl"
+                                    userDropdownExpanded = false
+                                }
+                            )
+                        }
                     }
-                    Box(Modifier.weight(1f)) { inner() }
                 }
+
+                // 4. Campo Proyecto Seleccionado
+                Column {
+                    Text(
+                        text = "Proyecto",
+                        color = RegisterTheme.TextSecondary,
+                        fontSize = 13.sp,
+                        modifier = Modifier.padding(bottom = 6.dp)
+                    )
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(RegisterTheme.CardBackground, RoundedCornerShape(16.dp))
+                            .border(1.dp, RegisterTheme.AccentTeal, RoundedCornerShape(16.dp))
+                            .clickable { onProjects() }
+                            .padding(16.dp)
+                    ) {
+                        Column {
+                            Text(
+                                text = "PROYECTO SELECCIONADO",
+                                color = RegisterTheme.AccentTeal,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 0.5.sp
+                            )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(40.dp)
+                                            .background(
+                                                currentProject.accentColor.copy(alpha = 0.2f),
+                                                CircleShape
+                                            )
+                                            .border(
+                                                1.dp,
+                                                currentProject.accentColor.copy(alpha = 0.5f),
+                                                CircleShape
+                                            ),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Image(
+                                            painter = painterResource(id = currentProject.iconRes),
+                                            contentDescription = null,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    }
+
+                                    Column {
+                                        Text(
+                                            text = currentProject.name,
+                                            color = RegisterTheme.TextPrimary,
+                                            fontSize = 15.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Text(
+                                            text = currentProject.clientAndType,
+                                            color = RegisterTheme.TextSecondary,
+                                            fontSize = 12.sp
+                                        )
+                                    }
+                                }
+
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                    contentDescription = null,
+                                    tint = RegisterTheme.TextSecondary
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // 5. Fecha
+                Column {
+                    Text(
+                        text = "Fecha",
+                        color = RegisterTheme.TextSecondary,
+                        fontSize = 13.sp,
+                        modifier = Modifier.padding(bottom = 6.dp)
+                    )
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(RegisterTheme.CardBackground, RoundedCornerShape(16.dp))
+                            .border(1.dp, RegisterTheme.CardBorder, RoundedCornerShape(16.dp))
+                            .clickable { }
+                            .padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.DateRange,
+                                contentDescription = null,
+                                tint = RegisterTheme.TextSecondary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Text(
+                                text = selectedDate,
+                                color = RegisterTheme.TextPrimary,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+
+                        Icon(
+                            imageVector = Icons.Default.KeyboardArrowDown,
+                            contentDescription = null,
+                            tint = RegisterTheme.TextSecondary
+                        )
+                    }
+                }
+
+                // 6. Horas y Minutos
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Horas",
+                            color = RegisterTheme.TextSecondary,
+                            fontSize = 13.sp,
+                            modifier = Modifier.padding(bottom = 6.dp)
+                        )
+
+                        Box {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(RegisterTheme.CardBackground, RoundedCornerShape(16.dp))
+                                    .border(1.dp, RegisterTheme.CardBorder, RoundedCornerShape(16.dp))
+                                    .clickable { hoursDropdownExpanded = true }
+                                    .padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = selectedHours,
+                                    color = RegisterTheme.TextPrimary,
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Icon(
+                                    imageVector = Icons.Default.KeyboardArrowDown,
+                                    contentDescription = null,
+                                    tint = RegisterTheme.TextSecondary
+                                )
+                            }
+
+                            DropdownMenu(
+                                expanded = hoursDropdownExpanded,
+                                onDismissRequest = { hoursDropdownExpanded = false }
+                            ) {
+                                hoursList.forEach { hour ->
+                                    DropdownMenuItem(
+                                        text = { Text("$hour h") },
+                                        onClick = {
+                                            selectedHours = hour
+                                            hoursDropdownExpanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Minutos",
+                            color = RegisterTheme.TextSecondary,
+                            fontSize = 13.sp,
+                            modifier = Modifier.padding(bottom = 6.dp)
+                        )
+
+                        Box {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(RegisterTheme.CardBackground, RoundedCornerShape(16.dp))
+                                    .border(1.dp, RegisterTheme.CardBorder, RoundedCornerShape(16.dp))
+                                    .clickable { minutesDropdownExpanded = true }
+                                    .padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = selectedMinutes,
+                                    color = RegisterTheme.TextPrimary,
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Icon(
+                                    imageVector = Icons.Default.KeyboardArrowDown,
+                                    contentDescription = null,
+                                    tint = RegisterTheme.TextSecondary
+                                )
+                            }
+
+                            DropdownMenu(
+                                expanded = minutesDropdownExpanded,
+                                onDismissRequest = { minutesDropdownExpanded = false }
+                            ) {
+                                minutesList.forEach { min ->
+                                    DropdownMenuItem(
+                                        text = { Text("$min min") },
+                                        onClick = {
+                                            selectedMinutes = min
+                                            minutesDropdownExpanded = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 7. Duración del Registro
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(RegisterTheme.CardBackground, RoundedCornerShape(16.dp))
+                        .border(1.dp, RegisterTheme.AccentTeal, RoundedCornerShape(16.dp))
+                        .padding(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column {
+                            Text(
+                                text = "Duración del registro",
+                                color = RegisterTheme.TextSecondary,
+                                fontSize = 12.sp
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "$selectedHours h $selectedMinutes min",
+                                color = RegisterTheme.TextPrimary,
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .background(RegisterTheme.AccentTeal, RoundedCornerShape(12.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Schedule,
+                                contentDescription = null,
+                                tint = RegisterTheme.TextPrimary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                    }
+                }
+
+                // 8. Tarea
+                Column {
+                    Text(
+                        text = "Nombre de la tarea",
+                        color = RegisterTheme.TextSecondary,
+                        fontSize = 13.sp,
+                        modifier = Modifier.padding(bottom = 6.dp)
+                    )
+
+                    OutlinedTextField(
+                        value = taskName,
+                        onValueChange = { taskName = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        placeholder = {
+                            Text(
+                                text = "Ej. Implementación de login y navegación...",
+                                color = RegisterTheme.TextSecondary.copy(alpha = 0.6f),
+                                fontSize = 13.sp
+                            )
+                        },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Assignment,
+                                contentDescription = null,
+                                tint = RegisterTheme.TextSecondary
+                            )
+                        },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = RegisterTheme.InputBackground,
+                            unfocusedContainerColor = RegisterTheme.InputBackground,
+                            focusedBorderColor = RegisterTheme.AccentTeal,
+                            unfocusedBorderColor = RegisterTheme.CardBorder,
+                            focusedTextColor = RegisterTheme.TextPrimary,
+                            unfocusedTextColor = RegisterTheme.TextPrimary
+                        ),
+                        singleLine = true
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // 9. Botón Guardar Registro
+                Button(
+                    onClick = {
+                        onSaveSuccess()
+                        onProjects() // Regresa a la lista de proyectos tras guardar
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(52.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = RegisterTheme.AccentTeal,
+                        contentColor = RegisterTheme.TextPrimary
+                    )
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "GUARDAR REGISTRO",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 15.sp,
+                            letterSpacing = 1.sp
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
             }
-        )
+        }
     }
 }
 
 @Composable
-private fun DurationFields(hours: String, minutes: String, onClick: () -> Unit) {
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        DurationSelectionField("Horas", hours, Modifier.weight(1f), onClick)
-        DurationSelectionField("Minutos", minutes, Modifier.weight(1f), onClick)
-    }
-}
-
-@Composable
-private fun DurationSelectionField(label: String, value: String, modifier: Modifier, onClick: () -> Unit) {
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(7.dp)) {
-        Text(label, color = RegisterMuted, fontSize = 12.sp)
+private fun RegisterBottomNavigationBar(
+    selectedTab: String,
+    onProjectsClick: () -> Unit,
+    onRegisterClick: () -> Unit,
+    onProfileClick: () -> Unit
+) {
+    Surface(
+        color = Color(0xFF0F172A).copy(alpha = 0.95f),
+        modifier = Modifier.fillMaxWidth()
+    ) {
         Row(
-            Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(14.dp)).background(Color(0x12FFFFFF)).border(1.dp, RegisterBorder, RoundedCornerShape(14.dp)).clickable(onClick = onClick).padding(horizontal = 14.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp, horizontal = 16.dp),
+            horizontalArrangement = Arrangement.SpaceAround,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(value.toIntOrNull()?.coerceAtLeast(0)?.toPickerValue() ?: "00", color = RegisterText, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-            DownGlyph()
+            RegisterBottomNavItem(
+                icon = Icons.Default.GridView,
+                label = "Proyectos",
+                isSelected = selectedTab == "Proyectos",
+                onClick = onProjectsClick
+            )
+
+            RegisterBottomNavItem(
+                icon = Icons.Default.Schedule,
+                label = "Registro",
+                isSelected = selectedTab == "Registro",
+                onClick = onRegisterClick
+            )
+
+            RegisterBottomNavItem(
+                icon = Icons.Default.Person,
+                label = "Perfil",
+                isSelected = selectedTab == "Perfil",
+                onClick = onProfileClick
+            )
         }
     }
 }
 
 @Composable
-private fun DurationPickerDialog(
-    step: DurationPickerStep,
-    hours: Int,
-    minutes: Int,
-    onHoursChange: (Int) -> Unit,
-    onMinutesChange: (Int) -> Unit,
-    onCancel: () -> Unit,
-    onContinue: () -> Unit,
-    onBack: () -> Unit,
-    onConfirm: () -> Unit
+private fun RegisterBottomNavItem(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    isSelected: Boolean,
+    onClick: () -> Unit
 ) {
-    val selectingHours = step == DurationPickerStep.Hours
-    val value = if (selectingHours) hours else minutes
-    val max = if (selectingHours) 23 else 59
+    val contentColor = if (isSelected) RegisterTheme.AccentTeal else RegisterTheme.TextSecondary
+
     Column(
-        Modifier.fillMaxWidth().padding(22.dp),
-        verticalArrangement = Arrangement.spacedBy(18.dp)
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .clip(RoundedCornerShape(16.dp))
+            .clickable { onClick() }
+            .padding(horizontal = 16.dp, vertical = 6.dp)
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(if (selectingHours) "Seleccionar horas" else "Seleccionar minutos", color = RegisterText, fontSize = 23.sp, fontWeight = FontWeight.SemiBold)
-            Text(if (selectingHours) "Paso 1 de 2" else "Paso 2 de 2", color = RegisterSubtle, fontSize = 12.sp)
-        }
-        WheelNumberPicker(
-            value = value,
-            maxValue = max,
-            onValueChange = if (selectingHours) onHoursChange else onMinutesChange
-        )
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            TextButton(
-                onClick = if (selectingHours) onCancel else onBack,
-                modifier = Modifier.weight(1f).height(50.dp),
-                shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.textButtonColors(contentColor = RegisterMuted)
-            ) {
-                Text(if (selectingHours) "Cancelar" else "Atrás", fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-            }
-            Button(
-                onClick = if (selectingHours) onContinue else onConfirm,
-                modifier = Modifier.weight(1f).height(50.dp),
-                shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = RegisterAction, contentColor = Color.White)
-            ) {
-                Text(if (selectingHours) "Continuar" else "Confirmar", fontSize = 14.sp, fontWeight = FontWeight.Bold)
-            }
-        }
-    }
-}
-
-@Composable
-private fun WheelNumberPicker(value: Int, maxValue: Int, onValueChange: (Int) -> Unit) {
-    key(maxValue) {
-        val itemHeight = 48.dp
-        val rangeSize = maxValue + 1
-        val virtualItemCount = Int.MAX_VALUE
-        val middleIndex = virtualItemCount / 2
-        val initialIndex = middleIndex - (middleIndex % rangeSize) + value
-        val listState = rememberLazyListState(initialFirstVisibleItemIndex = initialIndex)
-        val flingBehavior = rememberSnapFlingBehavior(listState)
-
-        LaunchedEffect(listState) {
-            snapshotFlow {
-                val layout = listState.layoutInfo
-                val viewportCenter = (layout.viewportStartOffset + layout.viewportEndOffset) / 2
-                layout.visibleItemsInfo.minByOrNull { item ->
-                    abs((item.offset + item.size / 2) - viewportCenter)
-                }?.index?.mod(rangeSize)
-            }.collect { selected ->
-                selected?.let(onValueChange)
-            }
-        }
-
         Box(
-            Modifier
-                .fillMaxWidth()
-                .height(168.dp)
-                .clip(RoundedCornerShape(20.dp))
-                .background(Color(0x12FFFFFF), RoundedCornerShape(20.dp))
-                .border(1.dp, RegisterBorder, RoundedCornerShape(20.dp)),
+            modifier = Modifier
+                .background(
+                    if (isSelected) RegisterTheme.AccentTeal.copy(alpha = 0.15f) else Color.Transparent,
+                    RoundedCornerShape(12.dp)
+                )
+                .padding(horizontal = 16.dp, vertical = 4.dp),
             contentAlignment = Alignment.Center
         ) {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                state = listState,
-                flingBehavior = flingBehavior,
-                contentPadding = PaddingValues(vertical = 60.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                items(virtualItemCount, key = { it }) { visualIndex ->
-                    val item = visualIndex % rangeSize
-                    val distance = abs(item - value).let { minOf(it, rangeSize - it) }
-                    val emphasis = when (distance) {
-                        0 -> RegisterText
-                        1 -> RegisterMuted
-                        else -> RegisterSubtle.copy(alpha = .55f)
-                    }
-                    Text(
-                        item.toPickerValue(),
-                        color = emphasis,
-                        fontSize = if (item == value) 28.sp else 18.sp,
-                        fontWeight = if (item == value) FontWeight.Bold else FontWeight.Medium,
-                        modifier = Modifier.height(itemHeight).fillMaxWidth().wrapContentHeight(Alignment.CenterVertically),
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                    )
-                }
-            }
-            Box(
-                Modifier.fillMaxWidth().height(itemHeight).background(Color(0x1939BFAF)).border(1.dp, RegisterTeal, RoundedCornerShape(12.dp))
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                tint = contentColor,
+                modifier = Modifier.size(22.dp)
             )
         }
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = label,
+            color = contentColor,
+            fontSize = 11.sp,
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+        )
     }
 }
-
-private fun Int.toPickerValue(): String = toString().padStart(2, '0')
-
-@Composable
-private fun DurationSummary(hours: String, minutes: String) {
-    val hoursText = hours.ifBlank { "0" }
-    val minutesText = minutes.ifBlank { "00" }.padStart(2, '0')
-    Row(
-        Modifier.fillMaxWidth().height(72.dp).clip(RoundedCornerShape(20.dp)).background(Color(0x1942C7B8)).border(1.dp, Color(0x4D42C7B8), RoundedCornerShape(20.dp)).padding(horizontal = 18.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            Text("Duración del registro", color = RegisterMuted, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-            Text("$hoursText h $minutesText min", color = RegisterText, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-        }
-        Box(Modifier.size(42.dp).background(RegisterAction, RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) { TimerGlyph(21.dp, Color.White) }
-    }
-}
-
-private fun Int.toDurationLabel(): String {
-    val hours = this / 60
-    val minutes = this % 60
-    return if (minutes == 0) "$hours h" else "$hours h ${minutes.toString().padStart(2, '0')} min"
-}
-
-@Composable private fun ProjectSymbol(color: Color) { Canvas(Modifier.size(42.dp)) { drawCircle(color.copy(alpha = .18f), size.minDimension / 2); drawCircle(color, size.minDimension * .12f, Offset(size.width * .33f, size.height * .35f)); drawCircle(color, size.minDimension * .12f, Offset(size.width * .65f, size.height * .35f)); drawCircle(color, size.minDimension * .12f, Offset(size.width * .50f, size.height * .66f)) } }
-@Composable private fun TimerGlyph(glyphSize: androidx.compose.ui.unit.Dp, color: Color) { Canvas(Modifier.size(glyphSize)) { val stroke = Stroke(1.8.dp.toPx(), cap = StrokeCap.Round); drawCircle(color, size.minDimension * .38f, style = stroke); drawLine(color, Offset(size.width / 2, size.height * .29f), Offset(size.width / 2, size.height * .53f), 1.8.dp.toPx(), StrokeCap.Round); drawLine(color, Offset(size.width / 2, size.height * .53f), Offset(size.width * .67f, size.height * .53f), 1.8.dp.toPx(), StrokeCap.Round) } }
-@Composable private fun TaskGlyph() { Canvas(Modifier.size(18.dp)) { val stroke = Stroke(1.7.dp.toPx(), cap = StrokeCap.Round); drawRoundRect(RegisterMuted, Offset(size.width * .14f, size.height * .16f), Size(size.width * .72f, size.height * .68f), androidx.compose.ui.geometry.CornerRadius(2.dp.toPx()), stroke); drawLine(RegisterMuted, Offset(size.width * .31f, size.height * .39f), Offset(size.width * .68f, size.height * .39f), 1.7.dp.toPx(), StrokeCap.Round); drawLine(RegisterMuted, Offset(size.width * .31f, size.height * .60f), Offset(size.width * .57f, size.height * .60f), 1.7.dp.toPx(), StrokeCap.Round) } }
-@Composable private fun CalendarGlyph() { Canvas(Modifier.size(18.dp)) { val stroke = Stroke(1.7.dp.toPx(), cap = StrokeCap.Round); drawRoundRect(RegisterMuted, Offset(size.width * .13f, size.height * .19f), Size(size.width * .74f, size.height * .67f), androidx.compose.ui.geometry.CornerRadius(2.dp.toPx()), stroke); drawLine(RegisterMuted, Offset(size.width * .13f, size.height * .42f), Offset(size.width * .87f, size.height * .42f), 1.7.dp.toPx()); drawLine(RegisterMuted, Offset(size.width * .35f, size.height * .10f), Offset(size.width * .35f, size.height * .30f), 1.7.dp.toPx(), StrokeCap.Round); drawLine(RegisterMuted, Offset(size.width * .65f, size.height * .10f), Offset(size.width * .65f, size.height * .30f), 1.7.dp.toPx(), StrokeCap.Round) } }
-@Composable private fun DownGlyph() { Canvas(Modifier.size(16.dp)) { drawLine(RegisterMuted, Offset(size.width * .25f, size.height * .38f), Offset(size.width * .50f, size.height * .63f), 1.8.dp.toPx(), StrokeCap.Round); drawLine(RegisterMuted, Offset(size.width * .50f, size.height * .63f), Offset(size.width * .75f, size.height * .38f), 1.8.dp.toPx(), StrokeCap.Round) } }
-@Composable private fun ChevronGlyph() { Canvas(Modifier.size(20.dp)) { drawLine(RegisterMuted, Offset(size.width * .38f, size.height * .22f), Offset(size.width * .64f, size.height * .50f), 1.8.dp.toPx(), StrokeCap.Round); drawLine(RegisterMuted, Offset(size.width * .64f, size.height * .50f), Offset(size.width * .38f, size.height * .78f), 1.8.dp.toPx(), StrokeCap.Round) } }
-@Composable private fun CheckGlyph() { Canvas(Modifier.size(18.dp)) { drawLine(Color.White, Offset(size.width * .18f, size.height * .52f), Offset(size.width * .42f, size.height * .74f), 1.9.dp.toPx(), StrokeCap.Round); drawLine(Color.White, Offset(size.width * .42f, size.height * .74f), Offset(size.width * .82f, size.height * .25f), 1.9.dp.toPx(), StrokeCap.Round) } }

@@ -1,5 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="widget_description">Seguimiento de proyectos DeepSource</string>
-    <style name="Theme.DeepSource" parent="android:style/Theme.Material.Light.NoActionBar" />
+    <style name="Theme.DeepSource" parent="android:Theme.Material.Light.NoActionBar">
+        <!-- Fondo nativo con el resplandor estático -->
+        <item name="android:windowBackground">@drawable/bg_native_splash</item>
+        <item name="android:windowSplashScreenBackground">#070C1E</item>
+
+        <!-- Oculta el icono circular nativo -->
+        <item name="android:windowSplashScreenAnimatedIcon">@android:color/transparent</item>
+
+        <item name="android:statusBarColor">#070C1E</item>
+        <item name="android:navigationBarColor">#070C1E</item>
+    </style>
 </resources>

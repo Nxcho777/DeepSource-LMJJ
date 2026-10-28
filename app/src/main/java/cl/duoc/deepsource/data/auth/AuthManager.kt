@@ -4,6 +4,7 @@ package cl.duoc.deepsource.data.auth
 import androidx.compose.runtime.mutableStateOf
 import cl.duoc.deepsource.domain.model.User
 import cl.duoc.deepsource.domain.model.UserRole
+import cl.duoc.deepsource.domain.model.UserRole.*
 
 data class DemoAccount(
     val user: User,
@@ -20,7 +21,7 @@ object AuthManager {
                 "marina.soto@deepsource.cl",
                 UserRole.LEADER
             ),
-            "Marina2026"
+            "12345678"
         ),
         DemoAccount(
             User(

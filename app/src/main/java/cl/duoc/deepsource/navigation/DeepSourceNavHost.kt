@@ -4,33 +4,89 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+
+import cl.duoc.deepsource.data.auth.AuthManager
 import cl.duoc.deepsource.ui.screen.LoginScreen
-import cl.duoc.deepsource.ui.screen.ProfileScreen
-import cl.duoc.deepsource.ui.screen.ProjectsScreen
+import cl.duoc.deepsource.ui.screen.ProjectsHomeScreen
 import cl.duoc.deepsource.ui.screen.RegisterTimeScreen
+import cl.duoc.deepsource.ui.screen.ProfileScreen
+import cl.duoc.deepsource.ui.screen.SplashScreen
 
 @Composable
-fun DeepSourceNavHost(navController: NavHostController, startDestination: String = AppDestination.Login.route) {
-    NavHost(navController = navController, startDestination = startDestination) {
+fun DeepSourceNavHost(
+    navController: NavHostController,
+    startDestination: String = AppDestination.Splash.route
+) {
+    NavHost(
+        navController = navController,
+        startDestination = AppDestination.Splash.route // O el identificador de tu Splash
+    ) {
+        composable(AppDestination.Splash.route) {
+            SplashScreen(
+                onSplashFinished = {
+                    navController.navigate(AppDestination.Login.route) { // O tu pantalla siguiente
+                        // Elimina el Splash de la pila para que no se pueda regresar a él
+                        popUpTo(AppDestination.Splash.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        // 2. Pantalla de Inicio de Sesión
         composable(AppDestination.Login.route) {
-            LoginScreen(onLogin = { navController.navigate(AppDestination.Projects.route) })
+            LoginScreen(
+                onLoginClick = { email, password ->
+                    val isSuccess = AuthManager.login(email, password)
+                    if (isSuccess) {
+                        navController.navigate(AppDestination.Projects.route) {
+                            popUpTo(AppDestination.Login.route) {
+                                inclusive = true
+                            }
+                        }
+                    }
+                    isSuccess
+                }
+            )
         }
+
+        // 3. Pantalla Principal de Proyectos
         composable(AppDestination.Projects.route) {
-            ProjectsScreen(
-                onRegisterTime = { navController.navigate(AppDestination.RegisterTime.route) },
-                onProfile = { navController.navigate(AppDestination.Profile.route) }
+            ProjectsHomeScreen(
+                onRegisterClick = { projectId ->
+                    navController.navigate("${AppDestination.RegisterTime.route}/$projectId")
+                },
+                onProfileClick = {
+                    navController.navigate(AppDestination.Profile.route)
+                }
             )
         }
-        composable(AppDestination.RegisterTime.route) {
+
+        // 4. Pantalla de Registro de Tiempo (con parámetro de Proyecto)
+        composable("${AppDestination.RegisterTime.route}/{projectId}") { backStackEntry ->
+            val projectId = backStackEntry.arguments?.getString("projectId") ?: "1"
+
             RegisterTimeScreen(
-                onProjects = { navController.navigate(AppDestination.Projects.route) },
-                onProfile = { navController.navigate(AppDestination.Profile.route) }
+                projectId = projectId,
+                onProjects = {
+                    navController.navigate(AppDestination.Projects.route)
+                },
+                onProfile = {
+                    navController.navigate(AppDestination.Profile.route)
+                }
             )
         }
+
+        // 5. Pantalla de Perfil de Usuario
         composable(AppDestination.Profile.route) {
             ProfileScreen(
-                onProjects = { navController.navigate(AppDestination.Projects.route) },
-                onRegisterTime = { navController.navigate(AppDestination.RegisterTime.route) }
+                onProjectsClick = {
+                    navController.navigate(AppDestination.Projects.route) {
+                        popUpTo(AppDestination.Projects.route) { inclusive = true }
+                    }
+                },
+                onRegisterClick = {
+                    navController.navigate("${AppDestination.RegisterTime.route}/1")
+                }
             )
         }
     }

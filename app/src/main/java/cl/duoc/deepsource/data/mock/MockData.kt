@@ -6,13 +6,21 @@ import cl.duoc.deepsource.R
 import cl.duoc.deepsource.domain.model.Project
 import cl.duoc.deepsource.domain.model.TimeEntry
 import cl.duoc.deepsource.domain.model.User
+import cl.duoc.deepsource.domain.model.UserRole
 
 object MockData {
     val selectedProjectId = mutableStateOf("project-1")
     val currentUser = User(
-        id = "user-1",
-        name = "Marina Soto",
-        email = "marina.soto@deepsource.cl"
+        id = "1",
+        name = "Juan Pérez",
+        email = "juan@duoc.cl",
+        role = UserRole.LEADER
+    )
+    val user2 = User(
+        id = "2",
+        name = "María González",
+        email = "maria@duoc.cl",
+        role = UserRole.DEV // <-- Agregar el rol
     )
 
     // Lista global de los 4 iconos disponibles
