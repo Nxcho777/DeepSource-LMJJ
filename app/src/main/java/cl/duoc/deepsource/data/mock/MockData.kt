@@ -72,4 +72,39 @@ object MockData {
             projects[index] = projects[index].copy(iconRes = newIconRes)
         }
     }
+    fun addProject(
+        name: String,
+        description: String,
+        client: String,
+        totalMinutes: Int,
+        iconRes: Int
+    ) {
+        require(name.isNotBlank()) {
+            "El nombre del proyecto es obligatorio."
+        }
+        require(description.isNotBlank()) {
+            "Debes ingresar una descripción."
+        }
+        require(client.isNotBlank()) {
+            "El cliente es obligatorio."
+        }
+        require(totalMinutes > 0) {
+            "Las horas estimadas deben ser mayores que cero."
+        }
+        require(iconRes in availableIcons) {
+            "Selecciona un icono válido."
+        }
+
+        val newProject = Project(
+            id = "project-${System.currentTimeMillis()}",
+            name = name.trim(),
+            description = description.trim(),
+            client = client.trim(),
+            registeredMinutes = 0,
+            totalMinutes = totalMinutes,
+            iconRes = iconRes
+        )
+
+        projects.add(newProject)
+    }
 }

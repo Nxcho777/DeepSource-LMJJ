@@ -11,6 +11,8 @@ import cl.duoc.deepsource.ui.screen.ProjectsHomeScreen
 import cl.duoc.deepsource.ui.screen.RegisterTimeScreen
 import cl.duoc.deepsource.ui.screen.ProfileScreen
 import cl.duoc.deepsource.ui.screen.SplashScreen
+import cl.duoc.deepsource.ui.screen.CreateProjectScreen
+
 
 @Composable
 fun DeepSourceNavHost(
@@ -53,10 +55,26 @@ fun DeepSourceNavHost(
         composable(AppDestination.Projects.route) {
             ProjectsHomeScreen(
                 onRegisterClick = { projectId ->
-                    navController.navigate("${AppDestination.RegisterTime.route}/$projectId")
+                    navController.navigate(
+                        "${AppDestination.RegisterTime.route}/$projectId"
+                    )
                 },
                 onProfileClick = {
                     navController.navigate(AppDestination.Profile.route)
+                },
+                onCreateProjectClick = {
+                    navController.navigate(AppDestination.CreateProject.route)
+                }
+            )
+        }
+
+        composable(AppDestination.CreateProject.route) {
+            CreateProjectScreen(
+                onBack = {
+                    navController.popBackStack()
+                },
+                onProjectCreated = {
+                    navController.popBackStack()
                 }
             )
         }
