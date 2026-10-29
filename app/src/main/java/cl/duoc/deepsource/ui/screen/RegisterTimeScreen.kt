@@ -30,8 +30,12 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
 import cl.duoc.deepsource.R
+import cl.duoc.deepsource.data.mock.MockData
+
+// --------------------------------------------------
+// Tema visual de la pantalla
+// --------------------------------------------------
 
 private object RegisterTheme {
     val DarkGradientTop = Color(0xFF0D1B2A)
@@ -54,36 +58,112 @@ private data class SelectedProjectData(
     val accentColor: Color
 )
 
+// --------------------------------------------------
+// Pantalla principal de registro de horas
+// --------------------------------------------------
+
 @Composable
 fun RegisterTimeScreen(
-    projectId: String = "1",
+    projectId: String = "project-1",
     onProjects: () -> Unit = {},
     onProfile: () -> Unit = {},
     onSaveSuccess: () -> Unit = {}
 ) {
-    val projectsMap = mapOf(
-        "1" to SelectedProjectData("Proyecto Atlas", "Deep Source · Producto", R.drawable.ic_icono_1, RegisterTheme.AccentTeal),
-        "2" to SelectedProjectData("App Boreal", "Nébula Labs · Mobile", R.drawable.ic_icono_2, Color(0xFFEAB308)),
-        "3" to SelectedProjectData("Portal Nova", "Nova Retail · Web", R.drawable.ic_icono_3, Color(0xFF06B6D4)),
-        "4" to SelectedProjectData("Lumen CRM", "Lumen Co. · Research", R.drawable.ic_icono_4, Color(0xFFEF4444))
+    val selectedProject = MockData.projects.firstOrNull {
+        it.id == projectId
+    } ?: MockData.projects.firstOrNull()
+
+    var selectedUser by remember {
+        mutableStateOf("Juan Pérez")
+    }
+
+    var selectedUserEmail by remember {
+        mutableStateOf("juan@duoc.cl")
+    }
+
+    var userDropdownExpanded by remember {
+        mutableStateOf(false)
+    }
+
+    var selectedDate by remember {
+        mutableStateOf("mié, 28 oct 2026")
+    }
+
+    var selectedHours by remember {
+        mutableStateOf("00")
+    }
+
+    var selectedMinutes by remember {
+        mutableStateOf("00")
+    }
+
+    var taskName by remember {
+        mutableStateOf("")
+    }
+
+    var hoursDropdownExpanded by remember {
+        mutableStateOf(false)
+    }
+
+    var minutesDropdownExpanded by remember {
+        mutableStateOf(false)
+    }
+
+    var validationMessage by remember {
+        mutableStateOf<String?>(null)
+    }
+
+    val hoursList = (0..12).map {
+        it.toString().padStart(2, '0')
+    }
+
+    val minutesList = listOf("00", "15", "30", "45")
+
+    // Si no hay proyectos, mostrar un mensaje en vez de fallar.
+    if (selectedProject == null) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(RegisterTheme.DarkGradientBottom)
+                .padding(24.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                Text(
+                    text = "No hay proyectos disponibles",
+                    color = RegisterTheme.TextPrimary,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Button(onClick = onProjects) {
+                    Text("Volver a proyectos")
+                }
+            }
+        }
+        return
+    }
+
+    val currentProject = SelectedProjectData(
+        name = selectedProject.name,
+        clientAndType =
+            "${selectedProject.client} · ${selectedProject.description}",
+        iconRes = selectedProject.iconRes ?: R.drawable.ic_icono_1,
+        accentColor = when (selectedProject.iconRes) {
+            R.drawable.ic_icono_1 -> Color(0xFFEF4444)
+            R.drawable.ic_icono_2 -> Color(0xFFEAB308)
+            R.drawable.ic_icono_3 -> Color(0xFF06B6D4)
+            R.drawable.ic_icono_4 -> Color(0xFF8B5CF6)
+            else -> RegisterTheme.AccentTeal
+        }
     )
 
-    val currentProject = projectsMap[projectId] ?: projectsMap["1"]!!
-
-    var selectedUser by remember { mutableStateOf("Juan Pérez") }
-    var selectedUserEmail by remember { mutableStateOf("juan@duoc.cl") }
-    var userDropdownExpanded by remember { mutableStateOf(false) }
-
-    var selectedDate by remember { mutableStateOf("mié, 28 oct 2026") }
-    var selectedHours by remember { mutableStateOf("00") }
-    var selectedMinutes by remember { mutableStateOf("00") }
-    var taskName by remember { mutableStateOf("") }
-
-    var hoursDropdownExpanded by remember { mutableStateOf(false) }
-    var minutesDropdownExpanded by remember { mutableStateOf(false) }
-
-    val hoursList = (0..12).map { it.toString().padStart(2, '0') }
-    val minutesList = listOf("00", "15", "30", "45")
+    // --------------------------------------------------
+    // Fondo y estructura principal
+    // --------------------------------------------------
 
     Box(
         modifier = Modifier
@@ -104,29 +184,36 @@ fun RegisterTimeScreen(
                 RegisterBottomNavigationBar(
                     selectedTab = "Registro",
                     onProjectsClick = onProjects,
-                    onRegisterClick = { },
+                    onRegisterClick = {},
                     onProfileClick = onProfile
                 )
             }
         ) { innerPadding ->
+
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp, vertical = 12.dp),
+                    .padding(
+                        horizontal = 20.dp,
+                        vertical = 12.dp
+                    ),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
 
-                // 1. Top Bar Custom
+                // 1. Barra superior
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Image(
-                        painter = painterResource(id = R.drawable.deepsource_logo),
-                        contentDescription = "Logo",
+                        painter = painterResource(
+                            id = R.drawable.deepsource_logo
+                        ),
+                        contentDescription = "Logo DeepSource",
                         modifier = Modifier
                             .height(44.dp)
                             .width(140.dp),
@@ -136,19 +223,23 @@ fun RegisterTimeScreen(
                     Box(
                         modifier = Modifier
                             .background(
-                                color = RegisterTheme.AccentTeal.copy(alpha = 0.15f),
-                                shape = RoundedCornerShape(50)
+                                RegisterTheme.AccentTeal.copy(alpha = 0.15f),
+                                RoundedCornerShape(50)
                             )
                             .border(
-                                width = 1.dp,
-                                color = RegisterTheme.AccentTeal.copy(alpha = 0.4f),
-                                shape = RoundedCornerShape(50)
+                                1.dp,
+                                RegisterTheme.AccentTeal.copy(alpha = 0.4f),
+                                RoundedCornerShape(50)
                             )
-                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                            .padding(
+                                horizontal = 12.dp,
+                                vertical = 6.dp
+                            )
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            horizontalArrangement =
+                                Arrangement.spacedBy(6.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Schedule,
@@ -156,6 +247,7 @@ fun RegisterTimeScreen(
                                 tint = RegisterTheme.AccentTeal,
                                 modifier = Modifier.size(16.dp)
                             )
+
                             Text(
                                 text = "3 h 30 min hoy",
                                 color = RegisterTheme.AccentTeal,
@@ -167,6 +259,7 @@ fun RegisterTimeScreen(
                 }
 
                 // 2. Encabezado
+
                 Column {
                     Text(
                         text = "NUEVO REGISTRO",
@@ -175,7 +268,9 @@ fun RegisterTimeScreen(
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 1.sp
                     )
+
                     Spacer(modifier = Modifier.height(4.dp))
+
                     Text(
                         text = "Registra tus horas",
                         color = RegisterTheme.TextPrimary,
@@ -184,7 +279,8 @@ fun RegisterTimeScreen(
                     )
                 }
 
-                // 3. Campo Usuario
+                // 3. Usuario
+
                 Column {
                     Text(
                         text = "Usuario",
@@ -197,25 +293,42 @@ fun RegisterTimeScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(RegisterTheme.CardBackground, RoundedCornerShape(16.dp))
-                                .border(1.dp, RegisterTheme.CardBorder, RoundedCornerShape(16.dp))
-                                .clickable { userDropdownExpanded = true }
+                                .background(
+                                    RegisterTheme.CardBackground,
+                                    RoundedCornerShape(16.dp)
+                                )
+                                .border(
+                                    1.dp,
+                                    RegisterTheme.CardBorder,
+                                    RoundedCornerShape(16.dp)
+                                )
+                                .clickable {
+                                    userDropdownExpanded = true
+                                }
                                 .padding(14.dp),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            horizontalArrangement =
+                                Arrangement.SpaceBetween
                         ) {
                             Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                verticalAlignment =
+                                    Alignment.CenterVertically,
+                                horizontalArrangement =
+                                    Arrangement.spacedBy(12.dp)
                             ) {
                                 Box(
                                     modifier = Modifier
                                         .size(36.dp)
-                                        .background(Color(0xFF164E5B), CircleShape),
+                                        .background(
+                                            Color(0xFF164E5B),
+                                            CircleShape
+                                        ),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
-                                        text = if (selectedUser.contains("Marina")) "MS" else "JP",
+                                        text = if (
+                                            selectedUser.contains("Marina")
+                                        ) "MS" else "JP",
                                         color = RegisterTheme.AccentTeal,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 13.sp
@@ -229,6 +342,7 @@ fun RegisterTimeScreen(
                                         fontSize = 14.sp,
                                         fontWeight = FontWeight.Bold
                                     )
+
                                     Text(
                                         text = selectedUserEmail,
                                         color = RegisterTheme.TextSecondary,
@@ -238,7 +352,8 @@ fun RegisterTimeScreen(
                             }
 
                             Icon(
-                                imageVector = Icons.Default.KeyboardArrowDown,
+                                imageVector =
+                                    Icons.Default.KeyboardArrowDown,
                                 contentDescription = null,
                                 tint = RegisterTheme.TextSecondary
                             )
@@ -246,21 +361,31 @@ fun RegisterTimeScreen(
 
                         DropdownMenu(
                             expanded = userDropdownExpanded,
-                            onDismissRequest = { userDropdownExpanded = false }
+                            onDismissRequest = {
+                                userDropdownExpanded = false
+                            }
                         ) {
                             DropdownMenuItem(
-                                text = { Text("Juan Pérez (juan@duoc.cl)") },
+                                text = {
+                                    Text("Juan Pérez (juan@duoc.cl)")
+                                },
                                 onClick = {
                                     selectedUser = "Juan Pérez"
                                     selectedUserEmail = "juan@duoc.cl"
                                     userDropdownExpanded = false
                                 }
                             )
+
                             DropdownMenuItem(
-                                text = { Text("Marina Soto (marina.soto@deepsource.cl)") },
+                                text = {
+                                    Text(
+                                        "Marina Soto (marina.soto@deepsource.cl)"
+                                    )
+                                },
                                 onClick = {
                                     selectedUser = "Marina Soto"
-                                    selectedUserEmail = "marina.soto@deepsource.cl"
+                                    selectedUserEmail =
+                                        "marina.soto@deepsource.cl"
                                     userDropdownExpanded = false
                                 }
                             )
@@ -268,7 +393,8 @@ fun RegisterTimeScreen(
                     }
                 }
 
-                // 4. Campo Proyecto Seleccionado
+                // 4. Proyecto seleccionado
+
                 Column {
                     Text(
                         text = "Proyecto",
@@ -280,9 +406,18 @@ fun RegisterTimeScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(RegisterTheme.CardBackground, RoundedCornerShape(16.dp))
-                            .border(1.dp, RegisterTheme.AccentTeal, RoundedCornerShape(16.dp))
-                            .clickable { onProjects() }
+                            .background(
+                                RegisterTheme.CardBackground,
+                                RoundedCornerShape(16.dp)
+                            )
+                            .border(
+                                1.dp,
+                                RegisterTheme.AccentTeal,
+                                RoundedCornerShape(16.dp)
+                            )
+                            .clickable {
+                                onProjects()
+                            }
                             .padding(16.dp)
                     ) {
                         Column {
@@ -298,29 +433,37 @@ fun RegisterTimeScreen(
 
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                verticalAlignment =
+                                    Alignment.CenterVertically,
+                                horizontalArrangement =
+                                    Arrangement.SpaceBetween
                             ) {
                                 Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    verticalAlignment =
+                                        Alignment.CenterVertically,
+                                    horizontalArrangement =
+                                        Arrangement.spacedBy(12.dp)
                                 ) {
                                     Box(
                                         modifier = Modifier
                                             .size(40.dp)
                                             .background(
-                                                currentProject.accentColor.copy(alpha = 0.2f),
+                                                currentProject.accentColor
+                                                    .copy(alpha = 0.2f),
                                                 CircleShape
                                             )
                                             .border(
                                                 1.dp,
-                                                currentProject.accentColor.copy(alpha = 0.5f),
+                                                currentProject.accentColor
+                                                    .copy(alpha = 0.5f),
                                                 CircleShape
                                             ),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Image(
-                                            painter = painterResource(id = currentProject.iconRes),
+                                            painter = painterResource(
+                                                id = currentProject.iconRes
+                                            ),
                                             contentDescription = null,
                                             modifier = Modifier.size(24.dp)
                                         )
@@ -333,16 +476,20 @@ fun RegisterTimeScreen(
                                             fontSize = 15.sp,
                                             fontWeight = FontWeight.Bold
                                         )
+
                                         Text(
-                                            text = currentProject.clientAndType,
-                                            color = RegisterTheme.TextSecondary,
+                                            text =
+                                                currentProject.clientAndType,
+                                            color =
+                                                RegisterTheme.TextSecondary,
                                             fontSize = 12.sp
                                         )
                                     }
                                 }
 
                                 Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                    imageVector =
+                                        Icons.AutoMirrored.Filled.KeyboardArrowRight,
                                     contentDescription = null,
                                     tint = RegisterTheme.TextSecondary
                                 )
@@ -352,6 +499,7 @@ fun RegisterTimeScreen(
                 }
 
                 // 5. Fecha
+
                 Column {
                     Text(
                         text = "Fecha",
@@ -363,16 +511,23 @@ fun RegisterTimeScreen(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(RegisterTheme.CardBackground, RoundedCornerShape(16.dp))
-                            .border(1.dp, RegisterTheme.CardBorder, RoundedCornerShape(16.dp))
-                            .clickable { }
+                            .background(
+                                RegisterTheme.CardBackground,
+                                RoundedCornerShape(16.dp)
+                            )
+                            .border(
+                                1.dp,
+                                RegisterTheme.CardBorder,
+                                RoundedCornerShape(16.dp)
+                            )
                             .padding(14.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            horizontalArrangement =
+                                Arrangement.spacedBy(10.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.DateRange,
@@ -380,6 +535,7 @@ fun RegisterTimeScreen(
                                 tint = RegisterTheme.TextSecondary,
                                 modifier = Modifier.size(20.dp)
                             )
+
                             Text(
                                 text = selectedDate,
                                 color = RegisterTheme.TextPrimary,
@@ -389,19 +545,26 @@ fun RegisterTimeScreen(
                         }
 
                         Icon(
-                            imageVector = Icons.Default.KeyboardArrowDown,
+                            imageVector =
+                                Icons.Default.KeyboardArrowDown,
                             contentDescription = null,
                             tint = RegisterTheme.TextSecondary
                         )
                     }
                 }
 
-                // 6. Horas y Minutos
+                // 6. Selección de horas y minutos
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
+
+                    // Horas
+
+                    Column(
+                        modifier = Modifier.weight(1f)
+                    ) {
                         Text(
                             text = "Horas",
                             color = RegisterTheme.TextSecondary,
@@ -413,12 +576,23 @@ fun RegisterTimeScreen(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .background(RegisterTheme.CardBackground, RoundedCornerShape(16.dp))
-                                    .border(1.dp, RegisterTheme.CardBorder, RoundedCornerShape(16.dp))
-                                    .clickable { hoursDropdownExpanded = true }
+                                    .background(
+                                        RegisterTheme.CardBackground,
+                                        RoundedCornerShape(16.dp)
+                                    )
+                                    .border(
+                                        1.dp,
+                                        RegisterTheme.CardBorder,
+                                        RoundedCornerShape(16.dp)
+                                    )
+                                    .clickable {
+                                        hoursDropdownExpanded = true
+                                    }
                                     .padding(14.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                verticalAlignment =
+                                    Alignment.CenterVertically,
+                                horizontalArrangement =
+                                    Arrangement.SpaceBetween
                             ) {
                                 Text(
                                     text = selectedHours,
@@ -426,8 +600,10 @@ fun RegisterTimeScreen(
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.Bold
                                 )
+
                                 Icon(
-                                    imageVector = Icons.Default.KeyboardArrowDown,
+                                    imageVector =
+                                        Icons.Default.KeyboardArrowDown,
                                     contentDescription = null,
                                     tint = RegisterTheme.TextSecondary
                                 )
@@ -435,11 +611,15 @@ fun RegisterTimeScreen(
 
                             DropdownMenu(
                                 expanded = hoursDropdownExpanded,
-                                onDismissRequest = { hoursDropdownExpanded = false }
+                                onDismissRequest = {
+                                    hoursDropdownExpanded = false
+                                }
                             ) {
                                 hoursList.forEach { hour ->
                                     DropdownMenuItem(
-                                        text = { Text("$hour h") },
+                                        text = {
+                                            Text("$hour h")
+                                        },
                                         onClick = {
                                             selectedHours = hour
                                             hoursDropdownExpanded = false
@@ -450,7 +630,11 @@ fun RegisterTimeScreen(
                         }
                     }
 
-                    Column(modifier = Modifier.weight(1f)) {
+                    // Minutos
+
+                    Column(
+                        modifier = Modifier.weight(1f)
+                    ) {
                         Text(
                             text = "Minutos",
                             color = RegisterTheme.TextSecondary,
@@ -462,12 +646,23 @@ fun RegisterTimeScreen(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .background(RegisterTheme.CardBackground, RoundedCornerShape(16.dp))
-                                    .border(1.dp, RegisterTheme.CardBorder, RoundedCornerShape(16.dp))
-                                    .clickable { minutesDropdownExpanded = true }
+                                    .background(
+                                        RegisterTheme.CardBackground,
+                                        RoundedCornerShape(16.dp)
+                                    )
+                                    .border(
+                                        1.dp,
+                                        RegisterTheme.CardBorder,
+                                        RoundedCornerShape(16.dp)
+                                    )
+                                    .clickable {
+                                        minutesDropdownExpanded = true
+                                    }
                                     .padding(14.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                verticalAlignment =
+                                    Alignment.CenterVertically,
+                                horizontalArrangement =
+                                    Arrangement.SpaceBetween
                             ) {
                                 Text(
                                     text = selectedMinutes,
@@ -475,8 +670,10 @@ fun RegisterTimeScreen(
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.Bold
                                 )
+
                                 Icon(
-                                    imageVector = Icons.Default.KeyboardArrowDown,
+                                    imageVector =
+                                        Icons.Default.KeyboardArrowDown,
                                     contentDescription = null,
                                     tint = RegisterTheme.TextSecondary
                                 )
@@ -484,11 +681,15 @@ fun RegisterTimeScreen(
 
                             DropdownMenu(
                                 expanded = minutesDropdownExpanded,
-                                onDismissRequest = { minutesDropdownExpanded = false }
+                                onDismissRequest = {
+                                    minutesDropdownExpanded = false
+                                }
                             ) {
                                 minutesList.forEach { min ->
                                     DropdownMenuItem(
-                                        text = { Text("$min min") },
+                                        text = {
+                                            Text("$min min")
+                                        },
                                         onClick = {
                                             selectedMinutes = min
                                             minutesDropdownExpanded = false
@@ -500,12 +701,20 @@ fun RegisterTimeScreen(
                     }
                 }
 
-                // 7. Duración del Registro
+                // 7. Duración del registro
+
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(RegisterTheme.CardBackground, RoundedCornerShape(16.dp))
-                        .border(1.dp, RegisterTheme.AccentTeal, RoundedCornerShape(16.dp))
+                        .background(
+                            RegisterTheme.CardBackground,
+                            RoundedCornerShape(16.dp)
+                        )
+                        .border(
+                            1.dp,
+                            RegisterTheme.AccentTeal,
+                            RoundedCornerShape(16.dp)
+                        )
                         .padding(16.dp)
                 ) {
                     Row(
@@ -519,9 +728,12 @@ fun RegisterTimeScreen(
                                 color = RegisterTheme.TextSecondary,
                                 fontSize = 12.sp
                             )
+
                             Spacer(modifier = Modifier.height(4.dp))
+
                             Text(
-                                text = "$selectedHours h $selectedMinutes min",
+                                text =
+                                    "$selectedHours h $selectedMinutes min",
                                 color = RegisterTheme.TextPrimary,
                                 fontSize = 20.sp,
                                 fontWeight = FontWeight.Bold
@@ -531,7 +743,10 @@ fun RegisterTimeScreen(
                         Box(
                             modifier = Modifier
                                 .size(44.dp)
-                                .background(RegisterTheme.AccentTeal, RoundedCornerShape(12.dp)),
+                                .background(
+                                    RegisterTheme.AccentTeal,
+                                    RoundedCornerShape(12.dp)
+                                ),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -544,7 +759,8 @@ fun RegisterTimeScreen(
                     }
                 }
 
-                // 8. Tarea
+                // 8. Nombre de la tarea
+
                 Column {
                     Text(
                         text = "Nombre de la tarea",
@@ -555,13 +771,18 @@ fun RegisterTimeScreen(
 
                     OutlinedTextField(
                         value = taskName,
-                        onValueChange = { taskName = it },
+                        onValueChange = {
+                            taskName = it
+                            validationMessage = null
+                        },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(16.dp),
                         placeholder = {
                             Text(
-                                text = "Ej. Implementación de login y navegación...",
-                                color = RegisterTheme.TextSecondary.copy(alpha = 0.6f),
+                                text =
+                                    "Ej. Implementación de login y navegación...",
+                                color = RegisterTheme.TextSecondary
+                                    .copy(alpha = 0.6f),
                                 fontSize = 13.sp
                             )
                         },
@@ -573,12 +794,18 @@ fun RegisterTimeScreen(
                             )
                         },
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = RegisterTheme.InputBackground,
-                            unfocusedContainerColor = RegisterTheme.InputBackground,
-                            focusedBorderColor = RegisterTheme.AccentTeal,
-                            unfocusedBorderColor = RegisterTheme.CardBorder,
-                            focusedTextColor = RegisterTheme.TextPrimary,
-                            unfocusedTextColor = RegisterTheme.TextPrimary
+                            focusedContainerColor =
+                                RegisterTheme.InputBackground,
+                            unfocusedContainerColor =
+                                RegisterTheme.InputBackground,
+                            focusedBorderColor =
+                                RegisterTheme.AccentTeal,
+                            unfocusedBorderColor =
+                                RegisterTheme.CardBorder,
+                            focusedTextColor =
+                                RegisterTheme.TextPrimary,
+                            unfocusedTextColor =
+                                RegisterTheme.TextPrimary
                         ),
                         singleLine = true
                     )
@@ -586,11 +813,49 @@ fun RegisterTimeScreen(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // 9. Botón Guardar Registro
+                // 9. Botón Guardar registro
+
                 Button(
                     onClick = {
-                        onSaveSuccess()
-                        onProjects() // Regresa a la lista de proyectos tras guardar
+                        val hours =
+                            selectedHours.toIntOrNull() ?: 0
+
+                        val minutes =
+                            selectedMinutes.toIntOrNull() ?: 0
+
+                        val totalMinutes = hours * 60 + minutes
+
+                        when {
+                            totalMinutes <= 0 -> {
+                                validationMessage =
+                                    "Selecciona una duración mayor que cero."
+                            }
+
+                            taskName.isBlank() -> {
+                                validationMessage =
+                                    "Ingresa el nombre de la tarea."
+                            }
+
+                            else -> {
+                                try {
+                                    MockData.addTimeEntry(
+                                        projectId = selectedProject.id,
+                                        durationMinutes = totalMinutes,
+                                        date = selectedDate,
+                                        note = taskName.trim()
+                                    )
+
+                                    validationMessage = null
+                                    onSaveSuccess()
+                                    onProjects()
+
+                                } catch (e: IllegalArgumentException) {
+                                    validationMessage =
+                                        e.message
+                                            ?: "No se pudo guardar el registro."
+                                }
+                            }
+                        }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -610,7 +875,9 @@ fun RegisterTimeScreen(
                             contentDescription = null,
                             modifier = Modifier.size(20.dp)
                         )
+
                         Spacer(modifier = Modifier.width(8.dp))
+
                         Text(
                             text = "GUARDAR REGISTRO",
                             fontWeight = FontWeight.Bold,
@@ -620,11 +887,26 @@ fun RegisterTimeScreen(
                     }
                 }
 
+                // Mensaje de validación
+
+                validationMessage?.let { message ->
+                    Text(
+                        text = message,
+                        color = Color(0xFFEF4444),
+                        fontSize = 13.sp,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }
 }
+
+// --------------------------------------------------
+// Navegación inferior
+// --------------------------------------------------
 
 @Composable
 private fun RegisterBottomNavigationBar(
@@ -640,7 +922,10 @@ private fun RegisterBottomNavigationBar(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 8.dp, horizontal = 16.dp),
+                .padding(
+                    vertical = 8.dp,
+                    horizontal = 16.dp
+                ),
             horizontalArrangement = Arrangement.SpaceAround,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -675,22 +960,36 @@ private fun RegisterBottomNavItem(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
-    val contentColor = if (isSelected) RegisterTheme.AccentTeal else RegisterTheme.TextSecondary
+    val contentColor = if (isSelected) {
+        RegisterTheme.AccentTeal
+    } else {
+        RegisterTheme.TextSecondary
+    }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
             .clip(RoundedCornerShape(16.dp))
             .clickable { onClick() }
-            .padding(horizontal = 16.dp, vertical = 6.dp)
+            .padding(
+                horizontal = 16.dp,
+                vertical = 6.dp
+            )
     ) {
         Box(
             modifier = Modifier
                 .background(
-                    if (isSelected) RegisterTheme.AccentTeal.copy(alpha = 0.15f) else Color.Transparent,
-                    RoundedCornerShape(12.dp)
+                    color = if (isSelected) {
+                        RegisterTheme.AccentTeal.copy(alpha = 0.15f)
+                    } else {
+                        Color.Transparent
+                    },
+                    shape = RoundedCornerShape(12.dp)
                 )
-                .padding(horizontal = 16.dp, vertical = 4.dp),
+                .padding(
+                    horizontal = 16.dp,
+                    vertical = 4.dp
+                ),
             contentAlignment = Alignment.Center
         ) {
             Icon(
@@ -700,12 +999,18 @@ private fun RegisterBottomNavItem(
                 modifier = Modifier.size(22.dp)
             )
         }
+
         Spacer(modifier = Modifier.height(2.dp))
+
         Text(
             text = label,
             color = contentColor,
             fontSize = 11.sp,
-            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+            fontWeight = if (isSelected) {
+                FontWeight.Bold
+            } else {
+                FontWeight.Normal
+            }
         )
     }
 }

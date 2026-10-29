@@ -81,12 +81,18 @@ fun DeepSourceNavHost(
 
         // 4. Pantalla de Registro de Tiempo (con parámetro de Proyecto)
         composable("${AppDestination.RegisterTime.route}/{projectId}") { backStackEntry ->
-            val projectId = backStackEntry.arguments?.getString("projectId") ?: "1"
+            val projectId = backStackEntry.arguments
+                ?.getString("projectId") ?: "project-1"
 
             RegisterTimeScreen(
                 projectId = projectId,
                 onProjects = {
-                    navController.navigate(AppDestination.Projects.route)
+                    navController.navigate(AppDestination.Projects.route) {
+                        popUpTo(AppDestination.Projects.route) {
+                            inclusive = false
+                        }
+                        launchSingleTop = true
+                    }
                 },
                 onProfile = {
                     navController.navigate(AppDestination.Profile.route)
@@ -103,7 +109,7 @@ fun DeepSourceNavHost(
                     }
                 },
                 onRegisterClick = {
-                    navController.navigate("${AppDestination.RegisterTime.route}/1")
+                    navController.navigate("${AppDestination.RegisterTime.route}/project-1")
                 }
             )
         }

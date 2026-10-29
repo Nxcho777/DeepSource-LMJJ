@@ -47,7 +47,14 @@ fun ProjectCard(
     onClick: () -> Unit
 ) {
     // 1. Animación suave del progreso de la barra (0.0f a 1.0f)
-    val targetProgress = (project.hoursRegistered.toFloat() / project.hoursTotal.toFloat()).coerceIn(0f, 1f)
+    val targetProgress = if (project.totalMinutes > 0) {
+        (
+                project.registeredMinutes.toFloat() /
+                        project.totalMinutes.toFloat()
+                ).coerceIn(0f, 1f)
+    } else {
+        0f
+    }
     val animatedProgress by animateFloatAsState(
         targetValue = targetProgress,
         animationSpec = tween(durationMillis = 800, easing = FastOutSlowInEasing),
@@ -154,14 +161,16 @@ fun ProjectCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "${project.hoursRegistered} h registradas",
+                    text = "${project.registeredMinutes / 60} h " +
+                            "${project.registeredMinutes % 60} min registradas",
                     color = ProjectsTheme.TextPrimary,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold
                 )
 
                 Text(
-                    text = "de ${project.hoursTotal} h",
+                    text = "de ${project.totalMinutes / 60} h " +
+                            "${project.totalMinutes % 60} min",
                     color = ProjectsTheme.TextSecondary,
                     fontSize = 12.sp
                 )

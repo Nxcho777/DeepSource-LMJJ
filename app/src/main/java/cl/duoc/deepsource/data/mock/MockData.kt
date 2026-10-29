@@ -49,19 +49,38 @@ object MockData {
     )
 
     // Agrega nuevas entradas de horas trabajadas desde la pantalla de registro
-    fun addTimeEntry(projectId: String, durationMinutes: Int, date: String, note: String) {
-        require(durationMinutes > 0) { "La duración debe ser mayor que cero." }
-        val projectIndex = projects.indexOfFirst { it.id == projectId }
-        require(projectIndex >= 0) { "Proyecto no encontrado." }
+    fun addTimeEntry(
+        projectId: String,
+        durationMinutes: Int,
+        date: String,
+        note: String
+    ) {
+        require(durationMinutes > 0) {
+            "La duración debe ser mayor que cero."
+        }
+
+        val projectIndex = projects.indexOfFirst {
+            it.id == projectId
+        }
+
+        require(projectIndex >= 0) {
+            "No se encontró el proyecto seleccionado."
+        }
 
         val project = projects[projectIndex]
-        projects[projectIndex] = project.copy(registeredMinutes = project.registeredMinutes + durationMinutes)
-        timeEntries += TimeEntry(
-            id = "entry-${timeEntries.size + 1}",
-            projectId = projectId,
-            durationMinutes = durationMinutes,
-            date = date,
-            note = note
+
+        projects[projectIndex] = project.copy(
+            registeredMinutes = project.registeredMinutes + durationMinutes
+        )
+
+        timeEntries.add(
+            TimeEntry(
+                id = "entry-${System.currentTimeMillis()}",
+                projectId = projectId,
+                durationMinutes = durationMinutes,
+                date = date,
+                note = note
+            )
         )
     }
 

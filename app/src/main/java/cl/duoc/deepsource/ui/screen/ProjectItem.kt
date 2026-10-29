@@ -8,19 +8,21 @@ data class ProjectItem(
     val name: String,
     val clientAndType: String,
     val iconRes: Int,
-    val hoursRegistered: Int,
-    val hoursTotal: Int,
+    val registeredMinutes: Int,
+    val totalMinutes: Int,
     val isSelected: Boolean = false
 ) {
     val percentage: Float
-        get() = if (hoursTotal > 0) {
-            (hoursRegistered.toFloat() / hoursTotal.toFloat()) * 100f
+        get() = if (totalMinutes > 0) {
+            registeredMinutes.toFloat() /
+                    totalMinutes.toFloat() * 100f
         } else {
             0f
         }
 
     val isCompleted: Boolean
-        get() = hoursRegistered >= hoursTotal
+        get() = totalMinutes > 0 &&
+                registeredMinutes >= totalMinutes
 
     val progressColor: Color
         get() = when {

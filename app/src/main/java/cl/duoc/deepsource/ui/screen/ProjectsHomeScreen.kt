@@ -33,6 +33,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cl.duoc.deepsource.R
 import cl.duoc.deepsource.data.mock.MockData
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
+import kotlin.math.cos
+import kotlin.math.sin
 
 @Composable
 fun ProjectsHomeScreen(
@@ -50,8 +54,8 @@ fun ProjectsHomeScreen(
             name = project.name,
             clientAndType = "${project.client} · ${project.description}",
             iconRes = project.iconRes ?: R.drawable.ic_icono_1,
-            hoursRegistered = project.registeredMinutes / 60,
-            hoursTotal = project.totalMinutes / 60
+            registeredMinutes = project.registeredMinutes,
+            totalMinutes = project.totalMinutes
         )
     }
 
@@ -70,7 +74,7 @@ fun ProjectsHomeScreen(
                     )
                 )
             )
-    ) {
+    ) { AmbientTideGlow()
         Scaffold(
             containerColor = Color.Transparent,
             bottomBar = {
@@ -156,7 +160,7 @@ fun ProjectsHomeScreen(
                     }
                 }
 
-                // 2. Encabezado y acceso a creación
+                // 2. Encabezado
                 item {
                     Spacer(modifier = Modifier.height(8.dp))
 
@@ -185,35 +189,25 @@ fun ProjectsHomeScreen(
                         fontSize = 13.sp
                     )
 
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    Button(
-                        onClick = onCreateProjectClick,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = ProjectsTheme.AccentTeal,
-                            contentColor = Color.White
-                        )
-                    ) {
-                        Text(
-                            text = "+ Crear proyecto",
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 15.sp
-                        )
-                    }
+                    Spacer(modifier = Modifier.height(6.dp))
                 }
 
-                // 3. Filtros animados
+                // 3. Crear proyecto y filtros en una sola fila
                 item {
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        // Filtro de proyectos activos
                         Button(
-                            onClick = { selectedFilter = "Activos" },
+                            onClick = {
+                                selectedFilter = "Activos"
+                            },
+                            contentPadding = PaddingValues(
+                                horizontal = 10.dp,
+                                vertical = 6.dp
+                            ),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor =
                                     if (selectedFilter == "Activos")
@@ -227,40 +221,25 @@ fun ProjectsHomeScreen(
                             border =
                                 if (selectedFilter == "Activos") null
                                 else ButtonDefaults.outlinedButtonBorder,
-                            shape = RoundedCornerShape(50),
-                            contentPadding = PaddingValues(
-                                horizontal = 16.dp,
-                                vertical = 8.dp
-                            )
+                            shape = RoundedCornerShape(50)
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "Activos · ",
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-
-                                AnimatedContent(
-                                    targetState = activeCount,
-                                    transitionSpec = {
-                                        slideInVertically { it } + fadeIn() togetherWith
-                                                slideOutVertically { -it } + fadeOut()
-                                    },
-                                    label = "ActiveCountAnimation"
-                                ) { count ->
-                                    Text(
-                                        text = "$count",
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
+                            Text(
+                                text = "Activos $activeCount",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1
+                            )
                         }
 
+                        // Filtro de proyectos completados
                         Button(
-                            onClick = { selectedFilter = "Completados" },
+                            onClick = {
+                                selectedFilter = "Completados"
+                            },
+                            contentPadding = PaddingValues(
+                                horizontal = 10.dp,
+                                vertical = 6.dp
+                            ),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor =
                                     if (selectedFilter == "Completados")
@@ -274,36 +253,37 @@ fun ProjectsHomeScreen(
                             border =
                                 if (selectedFilter == "Completados") null
                                 else ButtonDefaults.outlinedButtonBorder,
-                            shape = RoundedCornerShape(50),
+                            shape = RoundedCornerShape(50)
+                        ) {
+                            Text(
+                                text = "Completados $completedCount",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1
+                            )
+                        }
+
+                        // Botón Crear, a la derecha de Completados
+                        Spacer(modifier = Modifier.weight(1f))
+                        Button(
+                            onClick = onCreateProjectClick,
+                            modifier = Modifier.height(38.dp),
                             contentPadding = PaddingValues(
-                                horizontal = 16.dp,
-                                vertical = 8.dp
+                                horizontal = 10.dp,
+                                vertical = 6.dp
+                            ),
+                            shape = RoundedCornerShape(50),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = ProjectsTheme.AccentTeal,
+                                contentColor = Color.White
                             )
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "Completados · ",
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-
-                                AnimatedContent(
-                                    targetState = completedCount,
-                                    transitionSpec = {
-                                        slideInVertically { it } + fadeIn() togetherWith
-                                                slideOutVertically { -it } + fadeOut()
-                                    },
-                                    label = "CompletedCountAnimation"
-                                ) { count ->
-                                    Text(
-                                        text = "$count",
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
+                            Text(
+                                text = "+ Crear",
+                                fontWeight = FontWeight.Medium,
+                                fontSize = 12.sp,
+                                maxLines = 1
+                            )
                         }
                     }
                 }
@@ -383,5 +363,77 @@ fun ProjectsHomeScreen(
                 }
             }
         }
+    }
+
+}
+
+
+@Composable
+private fun AmbientTideGlow() {
+    val transition = rememberInfiniteTransition(label = "AmbientTide")
+
+    val phase by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = (2f * Math.PI).toFloat(),
+        animationSpec = infiniteRepeatable(
+            animation = tween(
+                durationMillis = 14000,
+                easing = LinearEasing
+            ),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "TidePhase"
+    )
+
+    Canvas(modifier = Modifier.fillMaxSize()) {
+        val w = size.width
+        val h = size.height
+        val radius = maxOf(w, h) * 0.42f
+
+        // Marea superior izquierda
+        val upperX = w * (
+                0.04f + 0.055f * sin(phase)
+                )
+        val upperY = h * (
+                0.06f + 0.045f * cos(phase * 0.8f)
+                )
+
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(
+                    Color(0xFF00F5D4).copy(alpha = 0.28f),
+                    Color(0xFF00D6C9).copy(alpha = 0.17f),
+                    Color(0xFF008FA3).copy(alpha = 0.08f),
+                    Color.Transparent
+                ),
+                center = Offset(upperX, upperY),
+                radius = radius
+            ),
+            radius = radius,
+            center = Offset(upperX, upperY)
+        )
+
+        // Marea inferior derecha, en diagonal opuesta
+        val lowerX = w * (
+                0.96f + 0.045f * cos(phase * 0.75f)
+                )
+        val lowerY = h * (
+                0.94f + 0.045f * sin(phase * 0.85f)
+                )
+
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(
+                    Color(0xFF00F5D4).copy(alpha = 0.28f),
+                    Color(0xFF00CDBB).copy(alpha = 0.17f),
+                    Color(0xFF087C99).copy(alpha = 0.08f),
+                    Color.Transparent
+                ),
+                center = Offset(lowerX, lowerY),
+                radius = radius
+            ),
+            radius = radius,
+            center = Offset(lowerX, lowerY)
+        )
     }
 }
