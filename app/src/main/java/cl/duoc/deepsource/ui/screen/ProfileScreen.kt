@@ -25,6 +25,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -41,11 +43,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cl.duoc.deepsource.R
-import cl.duoc.deepsource.data.mock.MockData
 import cl.duoc.deepsource.domain.model.Project
 import cl.duoc.deepsource.domain.model.ProjectStatus
+import cl.duoc.deepsource.domain.model.User
 import cl.duoc.deepsource.ui.component.DeepSourceBottomNavigation
 import cl.duoc.deepsource.ui.component.DeepSourceTab
+import cl.duoc.deepsource.ui.viewmodel.WorkspaceViewModel
 
 private val ProfileSurface = Color(0xFF080D1C)
 private val ProfileText = Color(0xFFF7FAFF)
@@ -56,8 +59,10 @@ private val ProfileAction = Color(0xFF2AAE9E)
 private val ProfileBorder = Color(0x26FFFFFF)
 
 @Composable
-fun ProfileScreen(onProjects: () -> Unit, onRegisterTime: () -> Unit) {
-    val completed = MockData.projects.take(3)
+fun ProfileScreen(viewModel: WorkspaceViewModel, onProjects: () -> Unit, onRegisterTime: () -> Unit) {
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val completed = state.profileProjects
+    val currentUser = state.currentUser
     Box(Modifier.fillMaxSize().background(ProfileSurface)) {
         ProfileAmbientBackground()
         Column(Modifier.fillMaxSize().statusBarsPadding()) {
@@ -67,8 +72,10 @@ fun ProfileScreen(onProjects: () -> Unit, onRegisterTime: () -> Unit) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Column(Modifier.widthIn(max = 440.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    ProfileIdentity()
+                    ProfileIdentity(currentUser)
                     ProfileOptions(completed.size)
+                    if (state.isLoading) Text("Cargando perfil...", color = ProfileMuted, fontSize = 12.sp)
+                    state.error?.let { Text(it, color = Color(0xFFE43939), fontSize = 12.sp) }
                     Text("Proyectos finalizados", color = ProfileText, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 2.dp))
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) { completed.forEach { CompletedProjectCard(it) } }
                 }
@@ -117,7 +124,7 @@ private fun ProfileHeader() {
 }
 
 @Composable
-private fun ProfileIdentity() {
+private fun ProfileIdentity(user: User?) {
     val shape = RoundedCornerShape(20.dp)
     Row(
         modifier = Modifier.fillMaxWidth().height(90.dp).clip(shape).background(Color(0xB810214E)).border(1.dp, Color(0x3DFFFFFF), shape).padding(14.dp),
@@ -128,8 +135,8 @@ private fun ProfileIdentity() {
             Text("MS", color = ProfileTeal, fontSize = 17.sp, fontWeight = FontWeight.Bold)
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            Text("Marina Soto", color = ProfileText, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
-            Text(MockData.currentUser.email, color = ProfileMuted, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(user?.name.orEmpty(), color = ProfileText, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+            Text(user?.email.orEmpty(), color = ProfileMuted, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Button(
             onClick = {},

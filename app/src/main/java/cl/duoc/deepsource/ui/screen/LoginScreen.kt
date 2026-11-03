@@ -28,10 +28,9 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -52,6 +51,7 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cl.duoc.deepsource.R
+import cl.duoc.deepsource.ui.viewmodel.LoginViewModel
 
 private val LoginSurface = Color(0xFF080D1C)
 private val LoginText = Color(0xFFF7FAFF)
@@ -61,11 +61,8 @@ private val LoginTeal = Color(0xFF2AAE9E)
 private val InputBorder = Color(0x26FFFFFF)
 
 @Composable
-fun LoginScreen(onLogin: () -> Unit) {
-    var username by remember { mutableStateOf("marina.soto@deepsource.cl") }
-    var password by remember { mutableStateOf("deepsource") }
-    var passwordVisible by remember { mutableStateOf(false) }
-    var rememberMe by remember { mutableStateOf(true) }
+fun LoginScreen(viewModel: LoginViewModel, onLogin: () -> Unit) {
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     Box(Modifier.fillMaxSize().background(LoginSurface).imePadding()) {
         LoginAmbientBackground()
@@ -94,14 +91,14 @@ fun LoginScreen(onLogin: () -> Unit) {
                 }
                 Spacer(Modifier.height(36.dp))
                 LoginCard(
-                    username = username,
-                    onUsernameChange = { username = it },
-                    password = password,
-                    onPasswordChange = { password = it },
-                    passwordVisible = passwordVisible,
-                    onPasswordVisibilityChange = { passwordVisible = !passwordVisible },
-                    rememberMe = rememberMe,
-                    onRememberMeChange = { rememberMe = it },
+                    username = state.username,
+                    onUsernameChange = viewModel::setUsername,
+                    password = state.password,
+                    onPasswordChange = viewModel::setPassword,
+                    passwordVisible = state.passwordVisible,
+                    onPasswordVisibilityChange = viewModel::togglePasswordVisibility,
+                    rememberMe = state.rememberMe,
+                    onRememberMeChange = viewModel::setRememberMe,
                     onLogin = onLogin
                 )
                 Spacer(Modifier.height(26.dp))

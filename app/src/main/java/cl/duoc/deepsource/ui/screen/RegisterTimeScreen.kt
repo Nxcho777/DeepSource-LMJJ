@@ -1,6 +1,9 @@
 package cl.duoc.deepsource.ui.screen
 
 import android.app.DatePickerDialog
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -34,11 +37,13 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -61,12 +66,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import cl.duoc.deepsource.R
-import cl.duoc.deepsource.data.mock.MockData
 import cl.duoc.deepsource.domain.model.Project
 import cl.duoc.deepsource.domain.model.User
-import cl.duoc.deepsource.widget.DeepSourceWidgetProvider
+import cl.duoc.deepsource.notification.NotificationPermissionStore
 import cl.duoc.deepsource.ui.component.DeepSourceBottomNavigation
 import cl.duoc.deepsource.ui.component.DeepSourceTab
+import cl.duoc.deepsource.ui.component.TimeReceiptDialog
+import cl.duoc.deepsource.ui.viewmodel.WorkspaceViewModel
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -83,31 +89,25 @@ private val RegisterBorder = Color(0x26FFFFFF)
 private enum class DurationPickerStep { Hours, Minutes }
 
 @Composable
-fun RegisterTimeScreen(onProjects: () -> Unit, onProfile: () -> Unit) {
+fun RegisterTimeScreen(viewModel: WorkspaceViewModel, onProjects: () -> Unit, onProfile: () -> Unit) {
     val context = LocalContext.current
-    var userId by remember { mutableStateOf(MockData.currentUser.id) }
-    var projectId by remember { mutableStateOf(MockData.selectedProjectId.value) }
-    var date by remember { mutableStateOf(LocalDate.now()) }
-    var hours by remember { mutableStateOf("00") }
-    var minutes by remember { mutableStateOf("00") }
-    var task by remember { mutableStateOf("") }
-    var savedMessage by remember { mutableStateOf<String?>(null) }
-    var userPickerOpen by remember { mutableStateOf(false) }
-    var projectPickerOpen by remember { mutableStateOf(false) }
-    var durationPickerOpen by remember { mutableStateOf(false) }
-    var durationPickerStep by remember { mutableStateOf(DurationPickerStep.Hours) }
-    var pendingHours by remember { mutableStateOf(0) }
-    var pendingMinutes by remember { mutableStateOf(0) }
-    val hoursValue = hours.toIntOrNull()
-    val minutesValue = minutes.toIntOrNull()
-    val durationMinutes = (hoursValue ?: 0) * 60 + (minutesValue ?: 0)
-    val valid = hoursValue?.let { it in 0..23 } == true &&
-        minutesValue?.let { it in 0..59 } == true && durationMinutes > 0 && task.isNotBlank()
-    val project = MockData.projects.firstOrNull { it.id == projectId } ?: MockData.projects.first()
-    val user = MockData.users.firstOrNull { it.id == userId } ?: MockData.currentUser
+    val permissionStore = remember(context) { NotificationPermissionStore(context) }
+    var offerNotificationPermission by remember(permissionStore) { mutableStateOf(permissionStore.shouldOfferRequest()) }
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
+    val workspace by viewModel.uiState.collectAsStateWithLifecycle()
+    val form by viewModel.registerState.collectAsStateWithLifecycle()
+    val date = LocalDate.parse(form.date)
+    var userPickerOpen by rememberSaveable { mutableStateOf(false) }
+    var projectPickerOpen by rememberSaveable { mutableStateOf(false) }
+    var durationPickerOpen by rememberSaveable { mutableStateOf(false) }
+    var durationPickerStep by rememberSaveable { mutableStateOf(DurationPickerStep.Hours) }
+    var pendingHours by rememberSaveable { mutableStateOf(0) }
+    var pendingMinutes by rememberSaveable { mutableStateOf(0) }
+    val project = workspace.selectedProject
+    val user = workspace.users.firstOrNull { it.id == form.userId } ?: workspace.users.firstOrNull()
     val openDurationPicker = {
-        pendingHours = (hours.toIntOrNull() ?: 0).coerceIn(0, 23)
-        pendingMinutes = (minutes.toIntOrNull() ?: 0).coerceIn(0, 59)
+        pendingHours = (form.hours.toIntOrNull() ?: 0).coerceIn(0, 23)
+        pendingMinutes = (form.minutes.toIntOrNull() ?: 0).coerceIn(0, 59)
         durationPickerStep = DurationPickerStep.Hours
         durationPickerOpen = true
     }
@@ -128,35 +128,41 @@ fun RegisterTimeScreen(onProjects: () -> Unit, onProfile: () -> Unit) {
                         Text("NUEVO REGISTRO", color = RegisterTeal, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         Text("Registra tus horas", color = RegisterText, fontSize = 28.sp, lineHeight = 34.sp)
                     }
-                    UserPicker(user, userPickerOpen, onToggle = { userPickerOpen = !userPickerOpen }) { selected ->
-                        userId = selected.id
-                        userPickerOpen = false
+                    if (workspace.isLoading) Text("Cargando datos...", color = RegisterMuted, fontSize = 12.sp)
+                    if (offerNotificationPermission) {
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text("Recibe un aviso al guardar horas.", color = RegisterMuted, fontSize = 12.sp)
+                            TextButton(onClick = {
+                                permissionStore.markRequested()
+                                offerNotificationPermission = false
+                                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            }) { Text("Activar notificaciones", color = RegisterTeal, fontSize = 12.sp) }
+                        }
                     }
-                    ProjectPicker(project, projectPickerOpen, onToggle = { projectPickerOpen = !projectPickerOpen }) { selected ->
-                        projectId = selected.id
-                        MockData.selectedProjectId.value = selected.id
-                        projectPickerOpen = false
+                    if (user != null) {
+                        UserPicker(user, workspace.users, userPickerOpen, onToggle = { userPickerOpen = !userPickerOpen }) { selected ->
+                            viewModel.selectUser(selected.id)
+                            userPickerOpen = false
+                        }
+                    }
+                    if (project != null) {
+                        ProjectPicker(project, workspace.projects, projectPickerOpen, onToggle = { projectPickerOpen = !projectPickerOpen }) { selected ->
+                            viewModel.selectProject(selected.id)
+                            projectPickerOpen = false
+                        }
                     }
                     DateField(date) {
                         DatePickerDialog(context, { _, year, month, day ->
-                            date = LocalDate.of(year, month + 1, day)
+                            viewModel.setDate(LocalDate.of(year, month + 1, day).toString())
                         }, date.year, date.monthValue - 1, date.dayOfMonth).show()
                     }
-                    DurationFields(hours, minutes, openDurationPicker)
-                    DurationSummary(hours, minutes)
-                    RegisterTextField("Nombre de la tarea", task, { task = it }, Modifier.fillMaxWidth(), KeyboardType.Text, FieldIcon.Task)
-                    savedMessage?.let { Text(it, color = RegisterTeal, fontSize = 12.sp, fontWeight = FontWeight.SemiBold) }
+                    DurationFields(form.hours, form.minutes, openDurationPicker)
+                    DurationSummary(form.hours, form.minutes)
+                    RegisterTextField("Nombre de la tarea", form.task, viewModel::setTask, Modifier.fillMaxWidth(), KeyboardType.Text, FieldIcon.Task)
+                    (form.message ?: workspace.error)?.let { Text(it, color = if (form.isError || workspace.error != null) Color(0xFFE43939) else RegisterTeal, fontSize = 12.sp, fontWeight = FontWeight.SemiBold) }
                     Button(
-                        onClick = {
-                            MockData.addTimeEntry(project.id, durationMinutes, date.toString(), task.trim())
-                            MockData.selectedProjectId.value = project.id
-                            DeepSourceWidgetProvider.requestRefresh(context)
-                            savedMessage = "Registro guardado: ${durationMinutes.toDurationLabel()} añadidos a ${project.name}."
-                            hours = "00"
-                            minutes = "00"
-                            task = ""
-                        },
-                        enabled = valid,
+                        onClick = viewModel::saveTimeEntry,
+                        enabled = form.isValid && !form.isSaving && form.receipt == null && !workspace.isLoading && project != null && user != null,
                         modifier = Modifier.fillMaxWidth().height(54.dp),
                         shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.buttonColors(
@@ -207,13 +213,19 @@ fun RegisterTimeScreen(onProjects: () -> Unit, onProfile: () -> Unit) {
                             onContinue = { durationPickerStep = DurationPickerStep.Minutes },
                             onBack = { durationPickerStep = DurationPickerStep.Hours },
                             onConfirm = {
-                                hours = pendingHours.toPickerValue()
-                                minutes = pendingMinutes.toPickerValue()
+                                viewModel.setHours(pendingHours.toPickerValue())
+                                viewModel.setMinutes(pendingMinutes.toPickerValue())
                                 durationPickerOpen = false
                             }
                         )
                     }
                 }
+            }
+        }
+        form.receipt?.let { receipt ->
+            TimeReceiptDialog(receipt) {
+                viewModel.acceptReceipt()
+                onProjects()
             }
         }
     }
@@ -260,7 +272,7 @@ private fun RegisterHeader() {
 }
 
 @Composable
-private fun UserPicker(user: User, expanded: Boolean, onToggle: () -> Unit, onUserSelected: (User) -> Unit) {
+private fun UserPicker(user: User, users: List<User>, expanded: Boolean, onToggle: () -> Unit, onUserSelected: (User) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
         Text("Usuario", color = RegisterMuted, fontSize = 12.sp)
         Row(
@@ -279,7 +291,7 @@ private fun UserPicker(user: User, expanded: Boolean, onToggle: () -> Unit, onUs
         }
         if (expanded) {
             Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Color(0x12FFFFFF)).border(1.dp, RegisterBorder, RoundedCornerShape(14.dp))) {
-                MockData.users.forEach { item ->
+                users.forEach { item ->
                     Row(
                         Modifier.fillMaxWidth().clickable { onUserSelected(item) }.padding(horizontal = 14.dp, vertical = 10.dp),
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -301,7 +313,7 @@ private fun UserPicker(user: User, expanded: Boolean, onToggle: () -> Unit, onUs
 }
 
 @Composable
-private fun ProjectPicker(project: Project, expanded: Boolean, onToggle: () -> Unit, onProjectSelected: (Project) -> Unit) {
+private fun ProjectPicker(project: Project, projects: List<Project>, expanded: Boolean, onToggle: () -> Unit, onProjectSelected: (Project) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
         Text("Proyecto", color = RegisterMuted, fontSize = 12.sp)
         Row(
@@ -319,7 +331,7 @@ private fun ProjectPicker(project: Project, expanded: Boolean, onToggle: () -> U
         }
         if (expanded) {
             Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(Color(0x12FFFFFF)).border(1.dp, RegisterBorder, RoundedCornerShape(14.dp))) {
-                MockData.projects.forEach { item ->
+                projects.forEach { item ->
                     Text(
                         item.name,
                         color = if (item.id == project.id) RegisterTeal else RegisterText,
@@ -531,11 +543,6 @@ private fun DurationSummary(hours: String, minutes: String) {
     }
 }
 
-private fun Int.toDurationLabel(): String {
-    val hours = this / 60
-    val minutes = this % 60
-    return if (minutes == 0) "$hours h" else "$hours h ${minutes.toString().padStart(2, '0')} min"
-}
 
 @Composable private fun ProjectSymbol(color: Color) { Canvas(Modifier.size(42.dp)) { drawCircle(color.copy(alpha = .18f), size.minDimension / 2); drawCircle(color, size.minDimension * .12f, Offset(size.width * .33f, size.height * .35f)); drawCircle(color, size.minDimension * .12f, Offset(size.width * .65f, size.height * .35f)); drawCircle(color, size.minDimension * .12f, Offset(size.width * .50f, size.height * .66f)) } }
 @Composable private fun TimerGlyph(glyphSize: androidx.compose.ui.unit.Dp, color: Color) { Canvas(Modifier.size(glyphSize)) { val stroke = Stroke(1.8.dp.toPx(), cap = StrokeCap.Round); drawCircle(color, size.minDimension * .38f, style = stroke); drawLine(color, Offset(size.width / 2, size.height * .29f), Offset(size.width / 2, size.height * .53f), 1.8.dp.toPx(), StrokeCap.Round); drawLine(color, Offset(size.width / 2, size.height * .53f), Offset(size.width * .67f, size.height * .53f), 1.8.dp.toPx(), StrokeCap.Round) } }

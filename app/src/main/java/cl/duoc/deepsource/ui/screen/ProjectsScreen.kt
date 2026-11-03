@@ -1,6 +1,13 @@
 package cl.duoc.deepsource.ui.screen
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -26,6 +33,7 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,11 +53,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cl.duoc.deepsource.R
-import cl.duoc.deepsource.data.mock.MockData
 import cl.duoc.deepsource.domain.model.Project
 import cl.duoc.deepsource.domain.model.ProjectStatus
 import cl.duoc.deepsource.ui.component.DeepSourceBottomNavigation
 import cl.duoc.deepsource.ui.component.DeepSourceTab
+import cl.duoc.deepsource.ui.animation.motionDurationMillis
+import cl.duoc.deepsource.ui.viewmodel.WorkspaceViewModel
 
 private val ScreenBackground = Color(0xFF080D1C)
 private val PrimaryTeal = Color(0xFF42C7B8)
@@ -60,8 +69,8 @@ private val SubtleText = Color(0xFF7D8AA7)
 private val GlassBorder = Color(0x26FFFFFF)
 
 @Composable
-fun ProjectsScreen(onRegisterTime: () -> Unit, onProfile: () -> Unit) {
-    val selectedProjectId by MockData.selectedProjectId
+fun ProjectsScreen(viewModel: WorkspaceViewModel, onRegisterTime: () -> Unit, onProfile: () -> Unit) {
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
     var statusLegendExpanded by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize().background(ScreenBackground)) {
@@ -82,11 +91,16 @@ fun ProjectsScreen(onRegisterTime: () -> Unit, onProfile: () -> Unit) {
                 }
             }
             item { Spacer(Modifier.height(16.dp)) }
-            items(MockData.projects, key = { it.id }) { project ->
+            if (state.isLoading) {
+                item { Text("Cargando proyectos...", color = MutedText, modifier = Modifier.padding(horizontal = 16.dp)) }
+            } else if (state.error != null) {
+                item { Text(state.error.orEmpty(), color = Color(0xFFE43939), modifier = Modifier.padding(horizontal = 16.dp)) }
+            }
+            items(state.projects, key = { it.id }) { project ->
                 ProjectCard(
                     project = project,
-                    selected = project.id == selectedProjectId,
-                    onClick = { MockData.selectedProjectId.value = project.id },
+                    selected = project.id == state.selectedProjectId,
+                    onClick = { viewModel.selectProject(project.id) },
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 5.5.dp)
                 )
             }
@@ -172,6 +186,7 @@ private fun ProjectFilter() {
 
 @Composable
 private fun ProjectStatusLegend(expanded: Boolean, onToggle: () -> Unit) {
+    val duration = motionDurationMillis(240)
     val rows = listOf(
         listOf<ProjectStatus?>(ProjectStatus.Initial, ProjectStatus.Medium),
         listOf(ProjectStatus.NoTime, ProjectStatus.Overtime),
@@ -186,7 +201,7 @@ private fun ProjectStatusLegend(expanded: Boolean, onToggle: () -> Unit) {
     ) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 13.dp, vertical = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(if (expanded) 9.dp else 0.dp)
+            verticalArrangement = Arrangement.spacedBy(9.dp)
         ) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(24.dp).background(Color(0x1A42C7B8), CircleShape), contentAlignment = Alignment.Center) { InfoGlyph() }
@@ -194,14 +209,20 @@ private fun ProjectStatusLegend(expanded: Boolean, onToggle: () -> Unit) {
                 Text(if (expanded) "Ocultar" else "Ver", color = PrimaryTeal, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
                 LegendChevron(expanded)
             }
-            if (expanded) {
-                rows.forEach { statuses ->
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        statuses.forEach { status ->
-                            if (status == null) {
-                                Spacer(Modifier.weight(1f))
-                            } else {
-                                StatusLegendItem(status, Modifier.weight(1f))
+            AnimatedVisibility(
+                visible = expanded,
+                enter = fadeIn(tween(duration)) + expandVertically(tween(duration)),
+                exit = fadeOut(tween(duration)) + shrinkVertically(tween(duration))
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                    rows.forEach { statuses ->
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            statuses.forEach { status ->
+                                if (status == null) {
+                                    Spacer(Modifier.weight(1f))
+                                } else {
+                                    StatusLegendItem(status, Modifier.weight(1f))
+                                }
                             }
                         }
                     }
@@ -241,6 +262,11 @@ private fun LegendChevron(expanded: Boolean) {
 @Composable
 fun ProjectCard(project: Project, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val accent = Color(project.status.color)
+    val animatedProgress by animateFloatAsState(
+        targetValue = project.progress,
+        animationSpec = tween(durationMillis = motionDurationMillis(420)),
+        label = "Progreso del proyecto"
+    )
     val cardShape = RoundedCornerShape(20.dp)
     Surface(
         modifier = modifier.fillMaxWidth().clip(cardShape).clickable(onClick = onClick),
@@ -266,7 +292,7 @@ fun ProjectCard(project: Project, selected: Boolean, onClick: () -> Unit, modifi
                     Text("de ${project.totalTimeLabel}", color = SubtleText, fontSize = 12.sp)
                 }
                 LinearProgressIndicator(
-                    progress = { project.progress },
+                    progress = { animatedProgress },
                     modifier = Modifier.fillMaxWidth().height(5.dp).clip(CircleShape),
                     color = accent,
                     trackColor = Color(0x14FFFFFF)

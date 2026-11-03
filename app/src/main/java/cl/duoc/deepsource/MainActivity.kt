@@ -4,26 +4,26 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import android.content.Intent
 import cl.duoc.deepsource.ui.DeepSourceApp
 import cl.duoc.deepsource.ui.theme.DeepSourceTheme
-import cl.duoc.deepsource.data.mock.MockData
+import cl.duoc.deepsource.ui.WidgetNavigationRequest
 import cl.duoc.deepsource.navigation.AppDestination
 
 class MainActivity : ComponentActivity() {
     private var startDestination by mutableStateOf(AppDestination.Login.route)
+    private var widgetRequest by mutableStateOf<WidgetNavigationRequest?>(null)
+    private var requestNumber = 0L
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        startDestination = intent.getStringExtra(EXTRA_DESTINATION) ?: AppDestination.Login.route
         handleNavigationIntent(intent)
         setContent {
             DeepSourceTheme {
-                key(startDestination) {
-                    DeepSourceApp(startDestination = startDestination)
-                }
+                DeepSourceApp(startDestination = startDestination, widgetRequest = widgetRequest)
             }
         }
     }
@@ -35,10 +35,9 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handleNavigationIntent(intent: Intent) {
-        startDestination = intent.getStringExtra(EXTRA_DESTINATION) ?: AppDestination.Login.route
-        intent.getStringExtra(EXTRA_PROJECT_ID)
-            ?.takeIf { id -> MockData.projects.any { it.id == id } }
-            ?.let { MockData.selectedProjectId.value = it }
+        if (intent.getStringExtra(EXTRA_DESTINATION) == AppDestination.RegisterTime.route) {
+            widgetRequest = WidgetNavigationRequest(++requestNumber, intent.getStringExtra(EXTRA_PROJECT_ID))
+        }
     }
 
     companion object {
