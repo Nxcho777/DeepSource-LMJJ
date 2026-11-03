@@ -6,21 +6,41 @@ import android.appwidget.AppWidgetProvider
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import android.widget.RemoteViews
 import cl.duoc.deepsource.MainActivity
 import cl.duoc.deepsource.R
-import cl.duoc.deepsource.data.mock.MockData
+import cl.duoc.deepsource.data.repository.DeepSourceRepository
+import cl.duoc.deepsource.domain.model.Project
 import cl.duoc.deepsource.navigation.AppDestination
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 class DeepSourceWidgetProvider : AppWidgetProvider() {
     override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) {
-        ids.forEach { id -> manager.updateAppWidget(id, createViews(context)) }
+        val pendingResult = goAsync()
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val repository = DeepSourceRepository.getInstance(context)
+                val projects = repository.getProjects()
+                val userName = repository.getUser(DeepSourceRepository.DEFAULT_USER_ID)?.name.orEmpty()
+                ids.forEach { id -> manager.updateAppWidget(id, createViews(context, userName, projects)) }
+            } catch (error: Exception) {
+                Log.e("DeepSourceWidget", "No se pudo actualizar el widget", error)
+            } finally {
+                pendingResult.finish()
+            }
+        }
     }
 
-    private fun createViews(context: Context): RemoteViews = RemoteViews(context.packageName, R.layout.widget_deepsource).apply {
-        setTextViewText(R.id.widget_user, MockData.currentUser.name)
+    private fun createViews(context: Context, userName: String, projects: List<Project>): RemoteViews = RemoteViews(context.packageName, R.layout.widget_deepsource).apply {
+        setTextViewText(R.id.widget_user, userName)
         removeAllViews(R.id.widget_projects)
-        MockData.projects.take(MAX_VISIBLE_PROJECTS).forEach { project ->
+        // Four rows is the deliberate visual contract of this widget. Keeping that
+        // limit also prevents a long project list from making a launcher widget
+        // unexpectedly tall.
+        projects.take(MAX_VISIBLE_PROJECTS).forEach { project ->
             val row = RemoteViews(context.packageName, R.layout.widget_project_row)
             row.setTextViewText(R.id.widget_project_name, project.name)
             row.setTextViewText(R.id.widget_project_state, project.status.label)
@@ -39,12 +59,7 @@ class DeepSourceWidgetProvider : AppWidgetProvider() {
             putExtra(MainActivity.EXTRA_DESTINATION, AppDestination.RegisterTime.route)
             projectId?.let { putExtra(MainActivity.EXTRA_PROJECT_ID, it) }
         }
-        return PendingIntent.getActivity(
-            context,
-            projectId?.hashCode() ?: 0,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
+        return PendingIntent.getActivity(context, projectId?.hashCode() ?: 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
     }
 
     companion object {
