@@ -5,4 +5,6 @@ sealed class AppDestination(val route: String, val title: String) {
     data object Projects : AppDestination("projects", "Proyectos")
     data object RegisterTime : AppDestination("register_time", "Registrar tiempo")
     data object Profile : AppDestination("profile", "Perfil")
+
+    data object Splash : AppDestination("splash", "Splash")
 }

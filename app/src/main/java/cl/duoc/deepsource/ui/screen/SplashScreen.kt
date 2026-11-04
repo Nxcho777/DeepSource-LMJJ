@@ -1,183 +1,342 @@
+
 package cl.duoc.deepsource.ui.screen
 
-import androidx.compose.animation.core.*
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.EaseInOutSine
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import cl.duoc.deepsource.R
 import kotlinx.coroutines.delay
-import kotlin.math.cos
-import kotlin.math.sin
+import kotlin.math.hypot
 import kotlin.random.Random
-import kotlin.time.Duration.Companion.milliseconds
+import kotlinx.coroutines.launch
 
-private object NewBrandPalette {
-    val DeepNavy = Color(0xFF070C1E)        // Fondo azul noche profundo
-    val VibrantTurquoise = Color(0xFF00D29E) // Verde turquesa/cian resplandeciente
-    val MediumOcean = Color(0xFF0C527B)      // Azul de transición
-    val DeepIndigo = Color(0xFF1B1242)       // Tono violeta oscuro
+private val SplashBackground = Color(0xFF050B19)
+private val SplashTeal = Color(0xFF00E5C3)
+
+private const val SPLASH_DURATION = 2600L
+private const val GLOW_MOVE_DURATION = 1250
+
+// Selecciona una nueva ubicación alejada de las anteriores.
+private fun nextGlowPosition(
+    history: List<Offset>
+): Offset {
+    repeat(80) {
+        val candidate = Offset(
+            x = Random.nextFloat() * 0.90f + 0.05f,
+            y = Random.nextFloat() * 0.76f + 0.12f
+        )
+
+        val farEnough = history.all { previous ->
+            hypot(
+                (candidate.x - previous.x).toDouble(),
+                (candidate.y - previous.y).toDouble()
+            ) > 0.30
+        }
+
+        if (farEnough) {
+            return candidate
+        }
+    }
+
+    // Si no existe una posición suficientemente alejada
+    // de todas las anteriores, prioriza la más distante.
+    val candidates = List(40) {
+        Offset(
+            x = Random.nextFloat() * 0.90f + 0.05f,
+            y = Random.nextFloat() * 0.76f + 0.12f
+        )
+    }
+
+    return candidates.maxByOrNull { candidate ->
+        history.minOfOrNull { previous ->
+            hypot(
+                (candidate.x - previous.x).toDouble(),
+                (candidate.y - previous.y).toDouble()
+            )
+        } ?: 1.0
+    } ?: Offset(0.5f, 0.4f)
 }
 
 @Composable
 fun SplashScreen(
-    onSplashFinished: () -> Unit = {}
+    onSplashFinished: () -> Unit
 ) {
-    val alphaAnim = remember { Animatable(0f) }
-    val scaleAnim = remember { Animatable(0.94f) }
-
-    // Genera una fase/posición inicial aleatoria (entre 0 y 360 grados) cada vez que se abre la pantalla
-    val initialPhase = remember { (Random.nextFloat() * 2 * Math.PI).toFloat() }
-
-    val infiniteTransition = rememberInfiniteTransition(label = "FluidGradientMotion")
-
-    val progress by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = (2 * Math.PI).toFloat(),
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 8000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "GradientAngle"
-    )
-
-    LaunchedEffect(key1 = true) {
-        alphaAnim.animateTo(
-            targetValue = 1f,
-            animationSpec = tween(durationMillis = 800)
-        )
-    }
-
-    LaunchedEffect(key1 = true) {
-        scaleAnim.animateTo(
-            targetValue = 1f,
-            animationSpec = tween(durationMillis = 800)
-        )
-        delay(2500.milliseconds)
+    // Navegación automática al terminar Splash
+    LaunchedEffect(Unit) {
+        delay(SPLASH_DURATION)
         onSplashFinished()
     }
+
+    // Aparición del logotipo
+    val logoAlpha = remember {
+        Animatable(0f)
+    }
+
+    val logoScale = remember {
+        Animatable(0.92f)
+    }
+
+    LaunchedEffect(Unit) {
+        logoAlpha.animateTo(
+            targetValue = 1f,
+            animationSpec = tween(
+                durationMillis = 900,
+                easing = FastOutSlowInEasing
+            )
+        )
+    }
+
+    LaunchedEffect(Unit) {
+        logoScale.animateTo(
+            targetValue = 1f,
+            animationSpec = tween(
+                durationMillis = 1100,
+                easing = FastOutSlowInEasing
+            )
+        )
+    }
+
+    // Posición animada del brillo turquesa
+    // Las coordenadas están normalizadas de 0 a 1.
+    val glowX = remember {
+        Animatable(0.32f)
+    }
+
+    val glowY = remember {
+        Animatable(0.34f)
+    }
+
+    // Historial de posiciones visitadas
+    val positionHistory = remember {
+        mutableListOf(
+            Offset(0.32f, 0.34f)
+        )
+    }
+
+    // Movimiento ambiental continuo
+    LaunchedEffect(Unit) {
+        while (true) {
+            val nextPosition = nextGlowPosition(
+                positionHistory
+            )
+
+            // Ejecutamos las dos animaciones en paralelo
+            kotlinx.coroutines.coroutineScope {
+                launch {
+                    glowX.animateTo(
+                        targetValue = nextPosition.x,
+                        animationSpec = tween(
+                            durationMillis = GLOW_MOVE_DURATION,
+                            easing = EaseInOutSine
+                        )
+                    )
+                }
+
+                launch {
+                    glowY.animateTo(
+                        targetValue = nextPosition.y,
+                        animationSpec = tween(
+                            durationMillis = GLOW_MOVE_DURATION,
+                            easing = EaseInOutSine
+                        )
+                    )
+                }
+            }
+
+            positionHistory.add(nextPosition)
+
+            // Conservamos las últimas posiciones para
+            // evitar que el brillo vuelva al mismo sector.
+            if (positionHistory.size > 6) {
+                positionHistory.removeAt(0)
+            }
+        }
+    }
+
+    val infiniteTransition = rememberInfiniteTransition(
+        label = "SplashAnimation"
+    )
+
+    // Variación suave de intensidad
+    val glowAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.60f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(
+                durationMillis = 1800,
+                easing = EaseInOutSine
+            ),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "GlowAlpha"
+    )
+
+    // Rotación del indicador de carga
+    val loadingRotation by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(
+                durationMillis = 1100,
+                easing = LinearEasing
+            )
+        ),
+        label = "LoadingRotation"
+    )
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(NewBrandPalette.DeepNavy)
-            .drawBehind {
-                val width = size.width
-                val height = size.height
-
-                // Ángulo actual combinado con la fase inicial aleatoria
-                val currentAngle = progress + initialPhase
-
-                // Trayectoria con mayor radio de desplazamiento para que varíe en toda la pantalla
-                val turquoiseX = width * (0.45f + 0.22f * sin(currentAngle))
-                val turquoiseY = height * (0.48f + 0.18f * cos(currentAngle))
-
-                val indigoX = width * (0.65f - 0.20f * cos(currentAngle))
-                val indigoY = height * (0.68f - 0.15f * sin(currentAngle))
-
-                // Radio del pulso
-                val pulseRadiusTurquoise = width * (0.72f + 0.05f * sin(currentAngle * 2f))
-                val pulseRadiusIndigo = width * (0.85f + 0.06f * cos(currentAngle * 2f))
-
-                // Resplandor turquesa
-                drawRect(
-                    brush = Brush.radialGradient(
-                        colors = listOf(
-                            NewBrandPalette.VibrantTurquoise.copy(alpha = 0.52f),
-                            NewBrandPalette.VibrantTurquoise.copy(alpha = 0.28f),
-                            NewBrandPalette.VibrantTurquoise.copy(alpha = 0.12f),
-                            NewBrandPalette.MediumOcean.copy(alpha = 0.04f),
-                            NewBrandPalette.MediumOcean.copy(alpha = 0.01f),
-                            Color.Transparent
-                        ),
-                        center = Offset(turquoiseX, turquoiseY),
-                        radius = pulseRadiusTurquoise
-                    )
-                )
-
-                // Fondo índigo complementario
-                drawRect(
-                    brush = Brush.radialGradient(
-                        colors = listOf(
-                            NewBrandPalette.DeepIndigo.copy(alpha = 0.60f),
-                            NewBrandPalette.DeepIndigo.copy(alpha = 0.25f),
-                            NewBrandPalette.DeepIndigo.copy(alpha = 0.08f),
-                            Color.Transparent
-                        ),
-                        center = Offset(indigoX, indigoY),
-                        radius = pulseRadiusIndigo
-                    )
-                )
-
-                // Barrido sutil de haz de luz
-                val sweepStartX = width * (0.5f + 0.4f * sin(currentAngle))
-                val sweepEndX = width * (0.5f - 0.4f * sin(currentAngle))
-
-                drawRect(
-                    brush = Brush.linearGradient(
-                        colors = listOf(
-                            Color.Transparent,
-                            NewBrandPalette.VibrantTurquoise.copy(alpha = 0.05f),
-                            NewBrandPalette.MediumOcean.copy(alpha = 0.10f),
-                            Color.Transparent
-                        ),
-                        start = Offset(sweepStartX, 0f),
-                        end = Offset(sweepEndX, height)
-                    )
-                )
-            }
+            .background(SplashBackground)
     ) {
+
+        // FONDO ANIMADO
+        Canvas(
+            modifier = Modifier.fillMaxSize()
+        ) {
+            drawRect(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        Color(0xFF050B19),
+                        Color(0xFF061728),
+                        Color(0xFF080D20),
+                        Color(0xFF090B1D)
+                    )
+                )
+            )
+
+            val glowCenter = Offset(
+                x = size.width * glowX.value,
+                y = size.height * glowY.value
+            )
+
+            val glowRadius = size.width * 0.95f
+
+            // Brillo turquesa flotante
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(
+                        Color(0xFF008D78).copy(
+                            alpha = 0.60f * glowAlpha
+                        ),
+                        Color(0xFF005A57).copy(
+                            alpha = 0.22f * glowAlpha
+                        ),
+                        Color.Transparent
+                    ),
+                    center = glowCenter,
+                    radius = glowRadius
+                ),
+                center = glowCenter,
+                radius = glowRadius
+            )
+
+            // Brillo violeta inferior
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(
+                        Color(0xFF17153D).copy(alpha = 0.75f),
+                        Color.Transparent
+                    ),
+                    center = Offset(
+                        size.width * 0.65f,
+                        size.height * 0.88f
+                    ),
+                    radius = size.width * 0.85f
+                ),
+                center = Offset(
+                    size.width * 0.65f,
+                    size.height * 0.88f
+                ),
+                radius = size.width * 0.85f
+            )
+        }
+
+        // LOGOTIPO CENTRAL
         Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
             modifier = Modifier
                 .align(Alignment.Center)
-                .alpha(alphaAnim.value)
-                .scale(scaleAnim.value)
-                .padding(24.dp)
+                .offset(y = (-5).dp)
+                .alpha(logoAlpha.value)
+                .scale(logoScale.value),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(22.dp)
         ) {
+
             Image(
-                painter = painterResource(id = R.drawable.ic_splash_cube),
-                contentDescription = "DeepSource Cube Logo",
-                modifier = Modifier.size(120.dp),
+                painter = painterResource(
+                    id = R.drawable.ic_splash_cube
+                ),
+                contentDescription = "Logo DeepSource",
+                modifier = Modifier.size(64.dp),
                 contentScale = ContentScale.Fit
             )
 
-            Spacer(modifier = Modifier.height(24.dp))
-
             Image(
-                painter = painterResource(id = R.drawable.ic_splash_text),
-                contentDescription = "DeepSource Text Logo",
+                painter = painterResource(
+                    id = R.drawable.ic_splash_text
+                ),
+                contentDescription = "DeepSource",
                 modifier = Modifier
-                    .width(200.dp)
-                    .height(36.dp),
+                    .width(112.dp)
+                    .height(55.dp),
                 contentScale = ContentScale.Fit
             )
         }
 
-        CircularProgressIndicator(
+        // INDICADOR DE CARGA INFERIOR
+        Canvas(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = 60.dp)
-                .size(36.dp)
-                .alpha(alphaAnim.value),
-            color = NewBrandPalette.VibrantTurquoise,
-            strokeWidth = 3.dp
-        )
+                .navigationBarsPadding()
+                .padding(bottom = 28.dp)
+                .size(18.dp)
+        ) {
+            drawArc(
+                color = SplashTeal,
+                startAngle = loadingRotation,
+                sweepAngle = 75f,
+                useCenter = false,
+                style = Stroke(
+                    width = 2.dp.toPx(),
+                    cap = StrokeCap.Round
+                )
+            )
+        }
     }
 }

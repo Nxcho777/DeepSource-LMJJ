@@ -1,6 +1,6 @@
 package cl.duoc.deepsource.ui.screen
 
-import android.app.DatePickerDialog
+import androidx.compose.ui.window.DialogProperties
 import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -34,6 +34,10 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -74,6 +78,8 @@ import cl.duoc.deepsource.ui.component.DeepSourceTab
 import cl.duoc.deepsource.ui.component.TimeReceiptDialog
 import cl.duoc.deepsource.ui.viewmodel.WorkspaceViewModel
 import java.time.LocalDate
+import java.time.Instant
+import java.time.ZoneOffset
 import java.time.LocalTime
 import kotlinx.coroutines.delay
 import java.time.format.DateTimeFormatter
@@ -90,6 +96,7 @@ private val RegisterBorder = Color(0x26FFFFFF)
 
 private enum class DurationPickerStep { Hours, Minutes }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterTimeScreen(viewModel: WorkspaceViewModel, onProjects: () -> Unit, onProfile: () -> Unit) {
     val context = LocalContext.current
@@ -99,6 +106,7 @@ fun RegisterTimeScreen(viewModel: WorkspaceViewModel, onProjects: () -> Unit, on
     val workspace by viewModel.uiState.collectAsStateWithLifecycle()
     val form by viewModel.registerState.collectAsStateWithLifecycle()
     val date = LocalDate.parse(form.date)
+    var datePickerOpen by rememberSaveable { mutableStateOf(false) }
     var projectPickerOpen by rememberSaveable { mutableStateOf(false) }
     var durationPickerOpen by rememberSaveable { mutableStateOf(false) }
     var durationPickerStep by rememberSaveable { mutableStateOf(DurationPickerStep.Hours) }
@@ -147,9 +155,7 @@ fun RegisterTimeScreen(viewModel: WorkspaceViewModel, onProjects: () -> Unit, on
                         SelectedProjectCard(project, workspace.projects.indexOfFirst { it.id == project.id }, onClick = { projectPickerOpen = true })
                     }
                     DateField(date) {
-                        DatePickerDialog(context, { _, year, month, day ->
-                            viewModel.setDate(LocalDate.of(year, month + 1, day).toString())
-                        }, date.year, date.monthValue - 1, date.dayOfMonth).show()
+                        datePickerOpen = true
                     }
                     DurationFields(form.hours, form.minutes, openDurationPicker)
                     DurationSummary(form.hours, form.minutes)
@@ -174,13 +180,98 @@ fun RegisterTimeScreen(viewModel: WorkspaceViewModel, onProjects: () -> Unit, on
                     }
                 }
             }
-            DeepSourceBottomNavigation(
-                activeTab = DeepSourceTab.Register,
-                onProjects = onProjects,
-                onRegister = {},
-                onProfile = onProfile
-            )
         }
+        // Calendario DeepSource: reemplaza el selector nativo de Android.
+        if (datePickerOpen) {
+            val datePickerState = rememberDatePickerState(
+                initialSelectedDateMillis = date
+                    .atStartOfDay(ZoneOffset.UTC)
+                    .toInstant()
+                    .toEpochMilli()
+            )
+            Dialog(
+                onDismissRequest = {
+                    datePickerOpen = false
+                },
+                properties = DialogProperties(
+                    usePlatformDefaultWidth = false
+                )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp)
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(Color(0xFF0C1529))
+                        .border(
+                            1.dp,
+                            RegisterBorder,
+                            RoundedCornerShape(24.dp)
+                        )
+                        .padding(bottom = 12.dp)
+                ) {
+                    DatePicker(
+                        state = datePickerState,
+                        showModeToggle = false,
+                        title = {
+                            Text(
+                                text = "SELECCIONAR FECHA",
+                                color = RegisterTeal,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(start = 24.dp, top = 20.dp)
+                            )
+                        },
+                        colors = DatePickerDefaults.colors(
+                            containerColor = Color(0xFF0C1529),
+                            titleContentColor = RegisterTeal,
+                            headlineContentColor = RegisterText,
+                            weekdayContentColor = RegisterMuted,
+                            subheadContentColor = RegisterText,
+                            navigationContentColor = RegisterTeal,
+                            yearContentColor = RegisterText,
+                            currentYearContentColor = RegisterTeal,
+                            selectedYearContentColor = Color.White,
+                            selectedYearContainerColor = RegisterAction,
+                            dayContentColor = RegisterText,
+                            selectedDayContentColor = Color.White,
+                            selectedDayContainerColor = RegisterAction,
+                            todayContentColor = RegisterTeal,
+                            todayDateBorderColor = RegisterTeal
+                        )
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TextButton(onClick = { datePickerOpen = false }) {
+                            Text("Cancelar", color = RegisterMuted)
+                        }
+                        TextButton(
+                            onClick = {
+                                datePickerState.selectedDateMillis?.let { millis ->
+                                    val selectedDate = Instant.ofEpochMilli(millis)
+                                        .atZone(ZoneOffset.UTC)
+                                        .toLocalDate()
+                                    viewModel.setDate(selectedDate.toString())
+                                }
+                                datePickerOpen = false
+                            },
+                            enabled = datePickerState.selectedDateMillis != null
+                        ) {
+                            Text(
+                                "Confirmar",
+                                color = if (datePickerState.selectedDateMillis != null)
+                                    RegisterTeal else RegisterSubtle,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
         if (projectPickerOpen) {
             Dialog(onDismissRequest = { projectPickerOpen = false }) {
                 Column(
@@ -568,4 +659,3 @@ private fun DurationSummary(hours: String, minutes: String) {
 @Composable private fun DownGlyph() { Canvas(Modifier.size(16.dp)) { drawLine(RegisterMuted, Offset(size.width * .25f, size.height * .38f), Offset(size.width * .50f, size.height * .63f), 1.8.dp.toPx(), StrokeCap.Round); drawLine(RegisterMuted, Offset(size.width * .50f, size.height * .63f), Offset(size.width * .75f, size.height * .38f), 1.8.dp.toPx(), StrokeCap.Round) } }
 @Composable private fun ChevronGlyph() { Canvas(Modifier.size(20.dp)) { drawLine(RegisterMuted, Offset(size.width * .38f, size.height * .22f), Offset(size.width * .64f, size.height * .50f), 1.8.dp.toPx(), StrokeCap.Round); drawLine(RegisterMuted, Offset(size.width * .64f, size.height * .50f), Offset(size.width * .38f, size.height * .78f), 1.8.dp.toPx(), StrokeCap.Round) } }
 @Composable private fun CheckGlyph() { Canvas(Modifier.size(18.dp)) { drawLine(Color.White, Offset(size.width * .18f, size.height * .52f), Offset(size.width * .42f, size.height * .74f), 1.9.dp.toPx(), StrokeCap.Round); drawLine(Color.White, Offset(size.width * .42f, size.height * .74f), Offset(size.width * .82f, size.height * .25f), 1.9.dp.toPx(), StrokeCap.Round) } }
-

@@ -80,7 +80,7 @@ fun ProjectsScreen(viewModel: WorkspaceViewModel, onRegisterTime: () -> Unit, on
         ProjectsAmbientBackground()
         LazyColumn(
             modifier = Modifier.fillMaxSize().statusBarsPadding(),
-            contentPadding = PaddingValues(bottom = 136.dp)
+            contentPadding = PaddingValues(bottom = 24.dp)
         ) {
             item { ProjectsHeader() }
             item {
@@ -127,13 +127,6 @@ fun ProjectsScreen(viewModel: WorkspaceViewModel, onRegisterTime: () -> Unit, on
                 )
             }
         }
-        DeepSourceBottomNavigation(
-            activeTab = DeepSourceTab.Projects,
-            onProjects = {},
-            onRegister = onRegisterTime,
-            onProfile = onProfile,
-            modifier = Modifier.align(Alignment.BottomCenter)
-        )
     }
 }
 

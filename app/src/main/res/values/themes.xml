@@ -1,5 +1,33 @@
-<?xml version="1.0" encoding="utf-8"?>
+
 <resources>
-    <string name="widget_description">Seguimiento de proyectos DeepSource</string>
-    <style name="Theme.DeepSource" parent="android:style/Theme.Material.Light.NoActionBar" />
+
+    <string name="widget_description">
+        Seguimiento de proyectos DeepSource
+    </string>
+
+    <style
+        name="Theme.DeepSource"
+        parent="android:style/Theme.Material.Light.NoActionBar" />
+
+    <style
+        name="Theme.DeepSource.Starting"
+        parent="Theme.SplashScreen">
+
+        <item
+            name="windowSplashScreenBackground">
+            @color/deepsource_splash_background
+        </item>
+
+        <item
+            name="windowSplashScreenAnimatedIcon">
+            @drawable/ic_splash_transparent
+        </item>
+
+        <item
+            name="postSplashScreenTheme">
+            @style/Theme.DeepSource
+        </item>
+
+    </style>
+
 </resources>
