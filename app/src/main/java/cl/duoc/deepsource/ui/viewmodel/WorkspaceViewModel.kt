@@ -50,6 +50,11 @@ data class RegisterTimeUiState(
     val durationMinutes: Int get() = (hours.toIntOrNull() ?: 0) * 60 + (minutes.toIntOrNull() ?: 0)
     val isValid: Boolean get() = hours.toIntOrNull()?.let { it in 0..23 } == true &&
         minutes.toIntOrNull()?.let { it in 0..59 } == true && durationMinutes > 0 && task.isNotBlank()
+    val durationError: String? get() = if (
+        hours.toIntOrNull()?.let { it in 0..23 } != true ||
+        minutes.toIntOrNull()?.let { it in 0..59 } != true || durationMinutes <= 0
+    ) "Selecciona una duración válida mayor a 0." else null
+    val taskError: String? get() = if (task.isBlank()) "Ingresa el nombre de la tarea." else null
 }
 
 data class TimeReceipt(

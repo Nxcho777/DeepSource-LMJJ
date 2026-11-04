@@ -157,9 +157,9 @@ fun RegisterTimeScreen(viewModel: WorkspaceViewModel, onProjects: () -> Unit, on
                     DateField(date) {
                         datePickerOpen = true
                     }
-                    DurationFields(form.hours, form.minutes, openDurationPicker)
+                    DurationFields(form.hours, form.minutes, openDurationPicker, form.durationError)
                     DurationSummary(form.hours, form.minutes)
-                    RegisterTextField("Nombre de la tarea", form.task, viewModel::setTask, Modifier.fillMaxWidth(), KeyboardType.Text, FieldIcon.Task)
+                    RegisterTextField("Nombre de la tarea", form.task, viewModel::setTask, Modifier.fillMaxWidth(), KeyboardType.Text, FieldIcon.Task, form.taskError)
                     (form.message ?: workspace.error)?.let { Text(it, color = if (form.isError || workspace.error != null) Color(0xFFE43939) else RegisterTeal, fontSize = 12.sp, fontWeight = FontWeight.SemiBold) }
                     Button(
                         onClick = viewModel::saveTimeEntry,
@@ -472,13 +472,13 @@ private fun DateField(date: LocalDate, onClick: () -> Unit) {
 private enum class FieldIcon { Task, None }
 
 @Composable
-private fun RegisterTextField(label: String, value: String, onValueChange: (String) -> Unit, modifier: Modifier, keyboardType: KeyboardType, icon: FieldIcon = FieldIcon.None) {
+private fun RegisterTextField(label: String, value: String, onValueChange: (String) -> Unit, modifier: Modifier, keyboardType: KeyboardType, icon: FieldIcon = FieldIcon.None, errorMessage: String? = null) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(7.dp)) {
         Text(label, color = RegisterMuted, fontSize = 12.sp)
         BasicTextField(
             value = value,
             onValueChange = onValueChange,
-            modifier = Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(14.dp)).background(Color(0x12FFFFFF)).border(1.dp, RegisterBorder, RoundedCornerShape(14.dp)),
+            modifier = Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(14.dp)).background(Color(0x12FFFFFF)).border(1.dp, if (errorMessage != null) Color(0xFFE43939) else RegisterBorder, RoundedCornerShape(14.dp)),
             textStyle = TextStyle(color = RegisterText, fontSize = 15.sp),
             cursorBrush = SolidColor(RegisterText),
             singleLine = true,
@@ -493,23 +493,31 @@ private fun RegisterTextField(label: String, value: String, onValueChange: (Stri
                 }
             }
         )
+        if (errorMessage != null) {
+            Text(errorMessage, color = Color(0xFFE43939), fontSize = 12.sp)
+        }
     }
 }
 
 @Composable
-private fun DurationFields(hours: String, minutes: String, onClick: () -> Unit) {
-    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        DurationSelectionField("Horas", hours, Modifier.weight(1f), onClick)
-        DurationSelectionField("Minutos", minutes, Modifier.weight(1f), onClick)
+private fun DurationFields(hours: String, minutes: String, onClick: () -> Unit, errorMessage: String? = null) {
+    Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            DurationSelectionField("Horas", hours, Modifier.weight(1f), onClick, errorMessage)
+            DurationSelectionField("Minutos", minutes, Modifier.weight(1f), onClick, errorMessage)
+        }
+        if (errorMessage != null) {
+            Text(errorMessage, color = Color(0xFFE43939), fontSize = 12.sp)
+        }
     }
 }
 
 @Composable
-private fun DurationSelectionField(label: String, value: String, modifier: Modifier, onClick: () -> Unit) {
+private fun DurationSelectionField(label: String, value: String, modifier: Modifier, onClick: () -> Unit, errorMessage: String? = null) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(7.dp)) {
         Text(label, color = RegisterMuted, fontSize = 12.sp)
         Row(
-            Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(14.dp)).background(Color(0x12FFFFFF)).border(1.dp, RegisterBorder, RoundedCornerShape(14.dp)).clickable(onClick = onClick).padding(horizontal = 14.dp),
+            Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(14.dp)).background(Color(0x12FFFFFF)).border(1.dp, if (errorMessage != null) Color(0xFFE43939) else RegisterBorder, RoundedCornerShape(14.dp)).clickable(onClick = onClick).padding(horizontal = 14.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {

@@ -45,12 +45,20 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import cl.duoc.deepsource.data.mock.MockData
-
+import cl.duoc.deepsource.R
 private val CreateBackground = Color(0xFF080D1C)
 private val CreateCard = Color(0xFF101A30)
 private val CreateTeal = Color(0xFF29B5A6)
 private val CreateText = Color(0xFFF3F6FF)
 private val CreateMuted = Color(0xFFA8B5CC)
+
+private val availableIcons = listOf(
+    R.drawable.ic_icono_1,
+    R.drawable.ic_icono_2,
+    R.drawable.ic_icono_3,
+    R.drawable.ic_icono_4
+)
+
 
 @Composable
 fun CreateProjectScreen(
@@ -61,7 +69,7 @@ fun CreateProjectScreen(
     var description by remember { mutableStateOf("") }
     var client by remember { mutableStateOf("") }
     var hours by remember { mutableStateOf("40") }
-    var selectedIcon by remember { mutableStateOf(MockData.availableIcons.first()) }
+    var selectedIcon by remember { mutableStateOf(availableIcons.first()) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     val fieldColors = OutlinedTextFieldDefaults.colors(
@@ -199,8 +207,8 @@ fun CreateProjectScreen(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            MockData.availableIcons.forEach { iconRes ->
-                val isSelected = selectedIcon == iconRes
+            availableIcons.forEach { iconRes ->
+            val isSelected = selectedIcon == iconRes
 
                 Box(
                     modifier = Modifier
