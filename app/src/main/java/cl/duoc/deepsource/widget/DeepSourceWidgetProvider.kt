@@ -12,6 +12,7 @@ import cl.duoc.deepsource.MainActivity
 import cl.duoc.deepsource.R
 import cl.duoc.deepsource.data.repository.DeepSourceRepository
 import cl.duoc.deepsource.domain.model.Project
+import cl.duoc.deepsource.domain.model.ProjectStatus
 import cl.duoc.deepsource.navigation.AppDestination
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -42,11 +43,12 @@ class DeepSourceWidgetProvider : AppWidgetProvider() {
         // unexpectedly tall.
         projects.take(MAX_VISIBLE_PROJECTS).forEach { project ->
             val row = RemoteViews(context.packageName, R.layout.widget_project_row)
+            val statusLabel = project.status.widgetLabel()
             row.setTextViewText(R.id.widget_project_name, project.name)
-            row.setTextViewText(R.id.widget_project_state, project.status.label)
+            row.setTextViewText(R.id.widget_project_state, statusLabel)
             row.setTextViewText(R.id.widget_project_hours, project.registeredTimeLabel)
             row.setInt(R.id.widget_project_status, "setColorFilter", project.status.color.toInt())
-            row.setContentDescription(R.id.widget_project_status, project.status.label)
+            row.setContentDescription(R.id.widget_project_status, statusLabel)
             row.setOnClickPendingIntent(R.id.widget_project_row, registerIntent(context, project.id))
             addView(R.id.widget_projects, row)
         }
@@ -60,6 +62,11 @@ class DeepSourceWidgetProvider : AppWidgetProvider() {
             projectId?.let { putExtra(MainActivity.EXTRA_PROJECT_ID, it) }
         }
         return PendingIntent.getActivity(context, projectId?.hashCode() ?: 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+    }
+
+    private fun ProjectStatus.widgetLabel(): String = when (this) {
+        ProjectStatus.Finished -> "Finalizado"
+        else -> label.substringBefore(" ·")
     }
 
     companion object {

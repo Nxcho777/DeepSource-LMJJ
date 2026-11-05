@@ -72,7 +72,7 @@ fun TimeReceiptDialog(receipt: TimeReceipt, onAccept: () -> Unit) {
             ) {
                 Column(Modifier.padding(22.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     Text("REGISTRO EXITOSO", color = receiptTeal, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    Text("Comprobante de horas", color = receiptText, fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
+                    Text("¡Horas registradas!", color = receiptText, fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
                     HorizontalDivider(color = Color(0x26FFFFFF))
                     ReceiptRow("Proyecto", receipt.projectName)
                     ReceiptRow("Tarea", receipt.taskName)

@@ -53,7 +53,7 @@ data class RegisterTimeUiState(
     val isValid: Boolean get() = hours.toIntOrNull()?.let { it in 0..23 } == true &&
         minutes.toIntOrNull()?.let { it in 0..59 } == true && durationMinutes > 0 && task.isNotBlank()
     val durationError: String? get() = if (durationTouched && durationMinutes == 0) "Debes ingresar una duración mayor a cero." else null
-    val taskError: String? get() = if (taskTouched && task.isBlank()) "Ingresa el nombre de la tarea." else null
+    val taskError: String? get() = if (taskTouched && task.isBlank()) "Debes ingresar el nombre de la tarea." else null
 }
 
 data class TimeReceipt(

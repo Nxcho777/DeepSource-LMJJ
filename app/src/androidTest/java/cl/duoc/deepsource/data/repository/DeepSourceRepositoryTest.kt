@@ -86,6 +86,7 @@ class DeepSourceRepositoryTest {
         withTimeout(5_000) { viewModel.uiState.first { !it.isLoading && it.projects.isNotEmpty() } }
         viewModel.selectProject("project-2")
         viewModel.selectUser("user-2")
+        viewModel.setDate("2026-11-02")
         viewModel.setHours("01")
         viewModel.setMinutes("15")
         viewModel.setTask("Diseño")

@@ -7,6 +7,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,12 +31,14 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -54,6 +57,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -63,10 +67,12 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -94,7 +100,6 @@ private val RegisterSubtle = Color(0xFF7D8AA7)
 private val RegisterTeal = Color(0xFF42C7B8)
 private val RegisterAction = Color(0xFF2AAE9E)
 private val RegisterBorder = Color(0x26FFFFFF)
-private val RegisterError = Color(0xFFFF6B6B)
 
 private enum class DurationPickerStep { Hours, Minutes }
 
@@ -102,9 +107,11 @@ private enum class DurationPickerStep { Hours, Minutes }
 @Composable
 fun RegisterTimeScreen(viewModel: WorkspaceViewModel, onProjects: () -> Unit, onProfile: () -> Unit) {
     val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
     val permissionStore = remember(context) { NotificationPermissionStore(context) }
-    var offerNotificationPermission by remember(permissionStore) { mutableStateOf(permissionStore.shouldOfferRequest()) }
-    val notificationPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+        viewModel.saveTimeEntry()
+    }
     val workspace by viewModel.uiState.collectAsStateWithLifecycle()
     val form by viewModel.registerState.collectAsStateWithLifecycle()
     val date = LocalDate.parse(form.date)
@@ -120,13 +127,16 @@ fun RegisterTimeScreen(viewModel: WorkspaceViewModel, onProjects: () -> Unit, on
         if (user != null && form.userId != user.id) viewModel.selectUser(user.id)
     }
     val openDurationPicker = {
+        focusManager.clearFocus()
         pendingHours = (form.hours.toIntOrNull() ?: 0).coerceIn(0, 23)
         pendingMinutes = (form.minutes.toIntOrNull() ?: 0).coerceIn(0, 59)
         durationPickerStep = DurationPickerStep.Hours
         durationPickerOpen = true
     }
 
-    Box(Modifier.fillMaxSize().background(RegisterSurface)) {
+    Box(Modifier.fillMaxSize().background(RegisterSurface).pointerInput(Unit) {
+        detectTapGestures(onTap = { focusManager.clearFocus() })
+    }) {
         RegisterAmbientBackground()
         Column(Modifier.fillMaxSize().statusBarsPadding()) {
             RegisterHeader()
@@ -143,26 +153,20 @@ fun RegisterTimeScreen(viewModel: WorkspaceViewModel, onProjects: () -> Unit, on
                         Text(" ${user?.name ?: "usuario"}", color = RegisterText, fontSize = 28.sp, lineHeight = 34.sp)
                     }
                     if (workspace.isLoading) Text("Cargando datos...", color = RegisterMuted, fontSize = 12.sp)
-                    if (offerNotificationPermission) {
-                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text("Recibe un aviso al guardar horas.", color = RegisterMuted, fontSize = 12.sp)
-                            TextButton(onClick = {
-                                permissionStore.markRequested()
-                                offerNotificationPermission = false
-                                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                            }) { Text("Activar notificaciones", color = RegisterTeal, fontSize = 12.sp) }
-                        }
-                    }
                     if (project != null) {
-                        SelectedProjectCard(project, workspace.projects.indexOfFirst { it.id == project.id }, onClick = { projectPickerOpen = true })
+                        SelectedProjectCard(project, workspace.projects.indexOfFirst { it.id == project.id }, onClick = {
+                            focusManager.clearFocus()
+                            projectPickerOpen = true
+                        })
                     }
                     DateField(date) {
+                        focusManager.clearFocus()
                         datePickerOpen = true
                     }
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         DurationFields(form.hours, form.minutes, openDurationPicker, form.durationError != null)
                         form.durationError?.let { error ->
-                            Text(text = error, color = RegisterError, fontSize = 12.sp)
+                            Text(text = error, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
                         }
                     }
                     DurationSummary(form.hours, form.minutes)
@@ -174,7 +178,14 @@ fun RegisterTimeScreen(viewModel: WorkspaceViewModel, onProjects: () -> Unit, on
                     )
                     (form.message ?: workspace.error)?.let { Text(it, color = if (form.isError || workspace.error != null) Color(0xFFE43939) else RegisterTeal, fontSize = 12.sp, fontWeight = FontWeight.SemiBold) }
                     Button(
-                        onClick = viewModel::saveTimeEntry,
+                        onClick = {
+                            if (permissionStore.notificationsEnabled() && permissionStore.shouldOfferRequest()) {
+                                permissionStore.markRequested()
+                                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                            } else {
+                                viewModel.saveTimeEntry()
+                            }
+                        },
                         enabled = form.isValid && !form.isSaving && form.receipt == null && !workspace.isLoading && project != null && user != null,
                         modifier = Modifier.fillMaxWidth().height(54.dp),
                         shape = RoundedCornerShape(14.dp),
@@ -493,6 +504,7 @@ private fun RegisterTextField(
     onTouched: () -> Unit = {}, errorMessage: String? = null
 ) {
     var wasFocused by remember { mutableStateOf(false) }
+    val focusManager = LocalFocusManager.current
     Column(modifier, verticalArrangement = Arrangement.spacedBy(7.dp)) {
         Text(label, color = RegisterMuted, fontSize = 12.sp)
         BasicTextField(
@@ -509,11 +521,12 @@ private fun RegisterTextField(
                 }
                 .fillMaxWidth().height(52.dp).clip(RoundedCornerShape(14.dp))
                 .background(Color(0x12FFFFFF))
-                .border(1.dp, if (errorMessage != null) RegisterError else RegisterBorder, RoundedCornerShape(14.dp)),
+                .border(1.dp, if (errorMessage != null) MaterialTheme.colorScheme.error else RegisterBorder, RoundedCornerShape(14.dp)),
             textStyle = TextStyle(color = RegisterText, fontSize = 15.sp),
             cursorBrush = SolidColor(RegisterText),
             singleLine = true,
-            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = keyboardType),
+            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = keyboardType, imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
             decorationBox = { inner ->
                 Row(Modifier.fillMaxSize().padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     when (icon) {
@@ -525,7 +538,7 @@ private fun RegisterTextField(
             }
         )
         if (errorMessage != null) {
-            Text(text = errorMessage, color = RegisterError, fontSize = 12.sp)
+            Text(text = errorMessage, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
         }
     }
 }
@@ -545,7 +558,7 @@ private fun DurationSelectionField(label: String, value: String, modifier: Modif
         Row(
             Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(14.dp))
                 .background(Color(0x12FFFFFF))
-                .border(1.dp, if (hasError) RegisterError else RegisterBorder, RoundedCornerShape(14.dp))
+                .border(1.dp, if (hasError) MaterialTheme.colorScheme.error else RegisterBorder, RoundedCornerShape(14.dp))
                 .clickable(onClick = onClick).padding(horizontal = 14.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically

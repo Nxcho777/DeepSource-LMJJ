@@ -1,5 +1,15 @@
 package cl.duoc.deepsource.ui.screen
 
+import android.Manifest
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import android.content.Intent
+import android.net.Uri
+import android.os.Build
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -18,6 +28,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -25,7 +36,13 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
+import androidx.lifecycle.Lifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,7 +54,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -46,6 +65,8 @@ import cl.duoc.deepsource.R
 import cl.duoc.deepsource.domain.model.Project
 import cl.duoc.deepsource.domain.model.ProjectStatus
 import cl.duoc.deepsource.domain.model.User
+import cl.duoc.deepsource.notification.AndroidTimeEntryNotifier
+import cl.duoc.deepsource.notification.NotificationPermissionStore
 import cl.duoc.deepsource.ui.component.DeepSourceBottomNavigation
 import cl.duoc.deepsource.ui.component.DeepSourceTab
 import cl.duoc.deepsource.ui.viewmodel.WorkspaceViewModel
@@ -58,8 +79,69 @@ private val ProfileTeal = Color(0xFF42C7B8)
 private val ProfileAction = Color(0xFF2AAE9E)
 private val ProfileBorder = Color(0x26FFFFFF)
 
+internal fun notificationSwitchChecked(preferenceEnabled: Boolean, androidAllowed: Boolean): Boolean =
+    preferenceEnabled && androidAllowed
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
+}
+
 @Composable
 fun ProfileScreen(viewModel: WorkspaceViewModel, onProjects: () -> Unit, onRegisterTime: () -> Unit) {
+    val context = LocalContext.current
+    val activity = context.findActivity()
+    val permissionStore = remember(context) { NotificationPermissionStore(context) }
+    var notificationsEnabled by remember(permissionStore) { mutableStateOf(permissionStore.notificationsEnabled()) }
+    var androidNotificationsEnabled by remember(context) { mutableStateOf(AndroidTimeEntryNotifier.canPostNotifications(context)) }
+    var canRequestPermission by remember(context) { mutableStateOf(activity?.let(permissionStore::canRequestPermission) == true) }
+    var pendingEnableFromSettings by rememberSaveable { mutableStateOf(false) }
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+        androidNotificationsEnabled = AndroidTimeEntryNotifier.canPostNotifications(context)
+        notificationsEnabled = permissionStore.setNotificationsEnabled(granted && androidNotificationsEnabled)
+        canRequestPermission = activity?.let(permissionStore::canRequestPermission) == true
+    }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        androidNotificationsEnabled = AndroidTimeEntryNotifier.canPostNotifications(context)
+        canRequestPermission = activity?.let(permissionStore::canRequestPermission) == true
+        notificationsEnabled = if (pendingEnableFromSettings) {
+            pendingEnableFromSettings = false
+            permissionStore.setNotificationsEnabled(androidNotificationsEnabled)
+        } else if (!androidNotificationsEnabled && permissionStore.notificationsEnabled()) {
+            permissionStore.setNotificationsEnabled(false)
+        } else {
+            permissionStore.notificationsEnabled()
+        }
+    }
+    val onNotificationsCheckedChange: (Boolean) -> Unit = { checked ->
+        if (!checked) {
+            notificationsEnabled = permissionStore.setNotificationsEnabled(false)
+        } else {
+            androidNotificationsEnabled = AndroidTimeEntryNotifier.canPostNotifications(context)
+            when {
+                androidNotificationsEnabled -> {
+                    notificationsEnabled = permissionStore.setNotificationsEnabled(true)
+                }
+                activity != null && permissionStore.canRequestPermission(activity) -> {
+                    notificationsEnabled = permissionStore.setNotificationsEnabled(false)
+                    permissionStore.markRequested()
+                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
+                else -> {
+                    notificationsEnabled = permissionStore.setNotificationsEnabled(false)
+                    pendingEnableFromSettings = true
+                    val intent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                            .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                    } else {
+                        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}"))
+                    }
+                    context.startActivity(intent)
+                }
+            }
+        }
+    }
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val completed = state.profileProjects
     val currentUser = state.currentUser
@@ -73,7 +155,13 @@ fun ProfileScreen(viewModel: WorkspaceViewModel, onProjects: () -> Unit, onRegis
             ) {
                 Column(Modifier.widthIn(max = 440.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     ProfileIdentity(currentUser)
-                    ProfileOptions(completed.size)
+                    ProfileOptions(
+                        completed.size,
+                        notificationSwitchChecked(notificationsEnabled, androidNotificationsEnabled),
+                        androidNotificationsEnabled,
+                        canRequestPermission,
+                        onNotificationsCheckedChange = onNotificationsCheckedChange
+                    )
                     if (state.isLoading) Text("Cargando perfil...", color = ProfileMuted, fontSize = 12.sp)
                     state.error?.let { Text(it, color = Color(0xFFE43939), fontSize = 12.sp) }
                     Text("Proyectos finalizados", color = ProfileText, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 2.dp))
@@ -143,14 +231,32 @@ private fun ProfileIdentity(user: User?) {
 }
 
 @Composable
-private fun ProfileOptions(count: Int) {
+private fun ProfileOptions(
+    count: Int,
+    notificationsChecked: Boolean,
+    androidNotificationsEnabled: Boolean,
+    canRequestPermission: Boolean,
+    onNotificationsCheckedChange: (Boolean) -> Unit
+) {
     val shape = RoundedCornerShape(20.dp)
     Column(Modifier.fillMaxWidth().clip(shape).background(Color(0x12FFFFFF)).border(1.dp, ProfileBorder, shape)) {
         ProfileOption("Editar perfil", "Modifica tus datos personales", OptionIcon.User, OptionEnd.Chevron)
         OptionDivider()
         ProfileOption("Privacidad", "Configura la privacidad de tu cuenta", OptionIcon.Lock, OptionEnd.Chevron)
         OptionDivider()
-        ProfileOption("Notificaciones", "Configura tus notificaciones", OptionIcon.Bell, OptionEnd.Toggle)
+        ProfileOption(
+            "Notificaciones",
+            when {
+                androidNotificationsEnabled -> "Configura tus notificaciones"
+                canRequestPermission -> "Permiso de Android requerido"
+                else -> "Desactivadas en Android · Abrir ajustes"
+            },
+            OptionIcon.Bell,
+            OptionEnd.Toggle,
+            onClick = { onNotificationsCheckedChange(!notificationsChecked) },
+            toggleChecked = notificationsChecked,
+            onCheckedChange = onNotificationsCheckedChange
+        )
         OptionDivider()
         ProfileOption("Proyectos finalizados", "Consulta tus proyectos completados", OptionIcon.Folder, OptionEnd.Badge(count))
     }
@@ -163,9 +269,17 @@ private enum class OptionIcon { User, Lock, Bell, Folder }
 private sealed interface OptionEnd { data object Chevron : OptionEnd; data object Toggle : OptionEnd; data class Badge(val count: Int) : OptionEnd }
 
 @Composable
-private fun ProfileOption(title: String, subtitle: String, icon: OptionIcon, end: OptionEnd) {
+private fun ProfileOption(
+    title: String,
+    subtitle: String,
+    icon: OptionIcon,
+    end: OptionEnd,
+    onClick: () -> Unit = {},
+    toggleChecked: Boolean = false,
+    onCheckedChange: (Boolean) -> Unit = {}
+) {
     Row(
-        Modifier.fillMaxWidth().height(52.dp).clickable { }.padding(horizontal = 12.dp),
+        Modifier.fillMaxWidth().height(52.dp).clickable(onClick = onClick).padding(horizontal = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -176,7 +290,7 @@ private fun ProfileOption(title: String, subtitle: String, icon: OptionIcon, end
         }
         when (end) {
             OptionEnd.Chevron -> ChevronGlyph()
-            OptionEnd.Toggle -> ToggleVisual()
+            OptionEnd.Toggle -> ToggleVisual(toggleChecked, onCheckedChange)
             is OptionEnd.Badge -> Box(Modifier.height(24.dp).clip(CircleShape).background(Color(0x2442C7B8)).border(1.dp, Color(0x4D42C7B8), CircleShape).padding(horizontal = 8.dp), contentAlignment = Alignment.Center) {
                 Text(end.count.toString(), color = ProfileTeal, fontSize = 11.sp, fontWeight = FontWeight.Bold)
             }
@@ -217,7 +331,13 @@ private fun OptionGlyph(icon: OptionIcon) {
     }
 }
 
-@Composable private fun ToggleVisual() = Box(Modifier.width(38.dp).height(22.dp).background(ProfileAction, CircleShape).padding(3.dp), contentAlignment = Alignment.CenterEnd) { Box(Modifier.size(16.dp).background(Color.White, CircleShape)) }
+@Composable private fun ToggleVisual(checked: Boolean, onCheckedChange: (Boolean) -> Unit) = Box(
+    Modifier.width(38.dp).height(22.dp)
+        .background(if (checked) ProfileAction else ProfileSubtle, CircleShape)
+        .toggleable(value = checked, role = Role.Switch, onValueChange = onCheckedChange)
+        .padding(3.dp),
+    contentAlignment = if (checked) Alignment.CenterEnd else Alignment.CenterStart
+) { Box(Modifier.size(16.dp).background(Color.White, CircleShape)) }
 @Composable private fun CompletionIndicator() { Canvas(Modifier.size(34.dp)) { val finished = Color(ProjectStatus.Finished.color); drawCircle(finished.copy(alpha = .16f), size.minDimension / 2); drawCircle(finished, size.minDimension * .30f, style = Stroke(2.dp.toPx())); drawLine(finished, Offset(size.width * .30f, size.height * .52f), Offset(size.width * .45f, size.height * .67f), 2.dp.toPx(), StrokeCap.Round); drawLine(finished, Offset(size.width * .45f, size.height * .67f), Offset(size.width * .72f, size.height * .36f), 2.dp.toPx(), StrokeCap.Round) } }
 @Composable private fun MiniCheckGlyph() { Canvas(Modifier.size(12.dp)) { val finished = Color(ProjectStatus.Finished.color); drawLine(finished, Offset(size.width * .18f, size.height * .52f), Offset(size.width * .42f, size.height * .74f), 1.7.dp.toPx(), StrokeCap.Round); drawLine(finished, Offset(size.width * .42f, size.height * .74f), Offset(size.width * .82f, size.height * .25f), 1.7.dp.toPx(), StrokeCap.Round) } }
 @Composable private fun ChevronGlyph() { Canvas(Modifier.size(18.dp)) { drawLine(ProfileMuted, Offset(size.width * .36f, size.height * .22f), Offset(size.width * .64f, size.height * .50f), 1.8.dp.toPx(), StrokeCap.Round); drawLine(ProfileMuted, Offset(size.width * .64f, size.height * .50f), Offset(size.width * .36f, size.height * .78f), 1.8.dp.toPx(), StrokeCap.Round) } }
