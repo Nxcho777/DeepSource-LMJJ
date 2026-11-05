@@ -1,6 +1,6 @@
 # DeepSource
 
-Aplicación móvil desarrollada en Android para gestionar proyectos y registrar las horas de trabajo dedicadas a cada uno. Permite organizar tareas, consultar el avance de los proyectos y mantener un historial de los registros de tiempo.
+Aplicación móvil desarrollada en Android para gestionar proyectos y registrar las horas de trabajo dedicadas a cada uno. Permite organizar tareas, consultar el avance de los proyectos y conservar los registros de tiempo.
 
 ## Funcionalidades
 
