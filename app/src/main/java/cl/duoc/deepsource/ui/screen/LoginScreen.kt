@@ -1,6 +1,8 @@
 package cl.duoc.deepsource.ui.screen
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -26,6 +28,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -191,6 +194,34 @@ private fun LoginCard(
                 onPasswordVisibilityChange,
                 errorMessage = passwordError
             )
+        }
+        OutlinedButton(
+            onClick = { }, // Visual only: Google authentication is not implemented yet.
+            modifier = Modifier.fillMaxWidth().height(46.dp),
+            shape = RoundedCornerShape(14.dp),
+            border = BorderStroke(1.dp, Color(0x33FFFFFF)),
+            colors = ButtonDefaults.outlinedButtonColors(
+                containerColor = Color(0x12FFFFFF),
+                contentColor = LoginText
+            ),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 0.dp)
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.ic_google),
+                    contentDescription = null,
+                    modifier = Modifier.size(44.dp),
+                    contentScale = ContentScale.Fit
+                )
+                Text(
+                    "Iniciar sesión con Google",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Row(
