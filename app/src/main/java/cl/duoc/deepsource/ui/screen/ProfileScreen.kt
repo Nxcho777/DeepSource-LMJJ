@@ -80,12 +80,6 @@ fun ProfileScreen(viewModel: WorkspaceViewModel, onProjects: () -> Unit, onRegis
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) { completed.forEach { CompletedProjectCard(it) } }
                 }
             }
-            DeepSourceBottomNavigation(
-                activeTab = DeepSourceTab.Profile,
-                onProjects = onProjects,
-                onRegister = onRegisterTime,
-                onProfile = {}
-            )
         }
     }
 }

@@ -7,7 +7,7 @@
         android:label="DeepSource"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.DeepSource">
+        android:theme="@style/Theme.DeepSource.Starting">
         <receiver
             android:name=".widget.DeepSourceWidgetProvider"
             android:exported="true"

@@ -58,6 +58,7 @@ private val LoginText = Color(0xFFF7FAFF)
 private val LoginMuted = Color(0xFFAEB9D0)
 private val LoginSubtle = Color(0xFF7D8AA7)
 private val LoginTeal = Color(0xFF2AAE9E)
+private val LoginError = Color(0xFFFF6B6B)
 private val InputBorder = Color(0x26FFFFFF)
 
 @Composable
@@ -92,14 +93,19 @@ fun LoginScreen(viewModel: LoginViewModel, onLogin: () -> Unit) {
                 Spacer(Modifier.height(36.dp))
                 LoginCard(
                     username = state.username,
+                    usernameError = state.usernameError,
                     onUsernameChange = viewModel::setUsername,
                     password = state.password,
+                    passwordError = state.passwordError,
                     onPasswordChange = viewModel::setPassword,
                     passwordVisible = state.passwordVisible,
                     onPasswordVisibilityChange = viewModel::togglePasswordVisibility,
                     rememberMe = state.rememberMe,
                     onRememberMeChange = viewModel::setRememberMe,
-                    onLogin = onLogin
+                    loginError = state.loginError,
+                    onLogin = {
+                        if (viewModel.validateLogin()) onLogin()
+                    }
                 )
                 Spacer(Modifier.height(26.dp))
                 LoginSecurityFooter()
@@ -142,13 +148,16 @@ private fun DeepSourceLogo() {
 @Composable
 private fun LoginCard(
     username: String,
+    usernameError: String?,
     onUsernameChange: (String) -> Unit,
     password: String,
+    passwordError: String?,
     onPasswordChange: (String) -> Unit,
     passwordVisible: Boolean,
     onPasswordVisibilityChange: () -> Unit,
     rememberMe: Boolean,
     onRememberMeChange: (Boolean) -> Unit,
+    loginError: String?,
     onLogin: () -> Unit
 ) {
     val shape = RoundedCornerShape(24.dp)
@@ -172,14 +181,15 @@ private fun LoginCard(
             }
         }
         Column(verticalArrangement = Arrangement.spacedBy(17.dp)) {
-            LoginField("Username", username, onUsernameChange, LoginFieldKind.User)
+            LoginField("Username", username, onUsernameChange, LoginFieldKind.User, errorMessage = usernameError)
             LoginField(
                 "Password",
                 password,
                 onPasswordChange,
                 LoginFieldKind.Password,
                 passwordVisible,
-                onPasswordVisibilityChange
+                onPasswordVisibilityChange,
+                errorMessage = passwordError
             )
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
@@ -211,6 +221,15 @@ private fun LoginCard(
                 ArrowGlyph()
             }
         }
+        if (loginError != null) {
+            Text(
+                text = loginError,
+                color = LoginError,
+                fontSize = 12.sp,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
     }
 }
 
@@ -241,7 +260,8 @@ private fun LoginField(
     onValueChange: (String) -> Unit,
     kind: LoginFieldKind,
     passwordVisible: Boolean = false,
-    onPasswordVisibilityChange: (() -> Unit)? = null
+    onPasswordVisibilityChange: (() -> Unit)? = null,
+    errorMessage: String? = null
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
         Text(label, color = LoginMuted, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
@@ -253,7 +273,7 @@ private fun LoginField(
                 .height(56.dp)
                 .clip(RoundedCornerShape(14.dp))
                 .background(Color(0x17FFFFFF))
-                .border(1.dp, Color(0x33FFFFFF), RoundedCornerShape(14.dp)),
+                .border(1.dp, if (errorMessage != null) LoginError else Color(0x33FFFFFF), RoundedCornerShape(14.dp)),
             singleLine = true,
             textStyle = TextStyle(color = LoginText, fontSize = 15.sp),
             cursorBrush = SolidColor(LoginText),
@@ -275,6 +295,9 @@ private fun LoginField(
                 }
             }
         )
+        if (errorMessage != null) {
+            Text(text = errorMessage, color = LoginError, fontSize = 12.sp)
+        }
     }
 }
 

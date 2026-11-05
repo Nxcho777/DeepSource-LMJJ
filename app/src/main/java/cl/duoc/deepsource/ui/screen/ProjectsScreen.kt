@@ -3,6 +3,10 @@ package cl.duoc.deepsource.ui.screen
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -25,6 +29,20 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -41,8 +59,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
@@ -59,6 +77,7 @@ import cl.duoc.deepsource.ui.component.DeepSourceBottomNavigation
 import cl.duoc.deepsource.ui.component.DeepSourceTab
 import cl.duoc.deepsource.ui.animation.motionDurationMillis
 import cl.duoc.deepsource.ui.viewmodel.WorkspaceViewModel
+import androidx.compose.foundation.border
 
 private val ScreenBackground = Color(0xFF080D1C)
 private val PrimaryTeal = Color(0xFF42C7B8)
@@ -72,12 +91,26 @@ private val GlassBorder = Color(0x26FFFFFF)
 fun ProjectsScreen(viewModel: WorkspaceViewModel, onRegisterTime: () -> Unit, onProfile: () -> Unit) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var statusLegendExpanded by remember { mutableStateOf(false) }
+    var showCompleted by remember { mutableStateOf(false) }
+    var createDialogOpen by remember { mutableStateOf(false) }
+    var projectToFinish by remember { mutableStateOf<Project?>(null) }
+    val createState by viewModel.createProjectState.collectAsStateWithLifecycle()
+    LaunchedEffect(createState.createdProjectId) {
+        if (createState.createdProjectId != null) {
+            showCompleted = false
+            createDialogOpen = false
+            viewModel.resetCreateProjectState()
+        }
+    }
+    val activeProjects = state.projects.filter { it.status != ProjectStatus.Finished }
+    val completedProjects = state.projects.filter { it.status == ProjectStatus.Finished }
+    val visibleProjects = if (showCompleted) completedProjects else activeProjects
 
     Box(modifier = Modifier.fillMaxSize().background(ScreenBackground)) {
         ProjectsAmbientBackground()
         LazyColumn(
             modifier = Modifier.fillMaxSize().statusBarsPadding(),
-            contentPadding = PaddingValues(bottom = 136.dp)
+            contentPadding = PaddingValues(bottom = 24.dp)
         ) {
             item { ProjectsHeader() }
             item {
@@ -86,7 +119,27 @@ fun ProjectsScreen(viewModel: WorkspaceViewModel, onRegisterTime: () -> Unit, on
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     ProjectIntro()
-                    ProjectFilter()
+                    Surface(
+                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).clickable {
+                            viewModel.resetCreateProjectState()
+                            createDialogOpen = true
+                        },
+                        color = Color(0x1F2AAE9E),
+                        shape = RoundedCornerShape(14.dp),
+                        border = BorderStroke(1.dp, PrimaryTeal)
+                    ) {
+                        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Text("+", color = PrimaryTeal, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                            Text("Crear proyecto", color = MainText, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                    ProjectFilter(
+                        showCompleted = showCompleted,
+                        activeCount = activeProjects.size,
+                        completedCount = completedProjects.size,
+                        onShowActive = { showCompleted = false },
+                        onShowCompleted = { showCompleted = true }
+                    )
                     ProjectStatusLegend(statusLegendExpanded) { statusLegendExpanded = !statusLegendExpanded }
                 }
             }
@@ -96,22 +149,62 @@ fun ProjectsScreen(viewModel: WorkspaceViewModel, onRegisterTime: () -> Unit, on
             } else if (state.error != null) {
                 item { Text(state.error.orEmpty(), color = Color(0xFFE43939), modifier = Modifier.padding(horizontal = 16.dp)) }
             }
-            items(state.projects, key = { it.id }) { project ->
+            if (!state.isLoading && state.error == null && visibleProjects.isEmpty()) {
+                item {
+                    Text(
+                        text = if (showCompleted) "Todavía no tienes proyectos completados." else "No hay proyectos activos.",
+                        color = MutedText,
+                        fontSize = 13.sp,
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 18.dp)
+                    )
+                }
+            }
+            items(visibleProjects, key = { it.id }) { project ->
                 ProjectCard(
                     project = project,
                     selected = project.id == state.selectedProjectId,
-                    onClick = { viewModel.selectProject(project.id) },
+                    onClick = {
+                        viewModel.selectProject(project.id)
+                        onRegisterTime()
+                    },
+                    iconRes = projectIconResource(project.iconIndex),
+                    onFinish = if (project.isCompleted) null else { { projectToFinish = project } },
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 5.5.dp)
                 )
             }
         }
-        DeepSourceBottomNavigation(
-            activeTab = DeepSourceTab.Projects,
-            onProjects = {},
-            onRegister = onRegisterTime,
-            onProfile = onProfile,
-            modifier = Modifier.align(Alignment.BottomCenter)
-        )
+        projectToFinish?.let { project ->
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { projectToFinish = null },
+                title = { Text("Terminar proyecto", color = MainText) },
+                text = { Text("¿Marcar \"${project.name}\" como terminado? Pasará a Completados y cambiará a turquesa.", color = MutedText) },
+                confirmButton = {
+                    TextButton(onClick = {
+                        viewModel.finishProject(project.id)
+                        projectToFinish = null
+                    }) { Text("Terminar", color = PrimaryTeal) }
+                },
+                dismissButton = {
+                    TextButton(onClick = { projectToFinish = null }) { Text("Cancelar", color = MutedText) }
+                },
+                containerColor = Color(0xFF111B30)
+            )
+        }
+        if (createDialogOpen) {
+            CreateProjectDialog(
+                isSaving = createState.isSaving,
+                error = createState.error,
+                onDismiss = {
+                    if (!createState.isSaving) {
+                        createDialogOpen = false
+                        viewModel.resetCreateProjectState()
+                    }
+                },
+                onCreate = { name, client, description, hours, iconIndex ->
+                    viewModel.createProject(name, client, description, hours, iconIndex)
+                }
+            )
+        }
     }
 }
 
@@ -173,13 +266,41 @@ private fun ProjectIntro() {
 }
 
 @Composable
-private fun ProjectFilter() {
+private fun ProjectFilter(
+    showCompleted: Boolean,
+    activeCount: Int,
+    completedCount: Int,
+    onShowActive: () -> Unit,
+    onShowCompleted: () -> Unit
+) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Surface(color = ActiveTeal, shape = RoundedCornerShape(50)) {
-            Text("Activos · 4", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp))
+        Surface(
+            modifier = Modifier.clip(RoundedCornerShape(50)).clickable(onClick = onShowActive),
+            color = if (!showCompleted) ActiveTeal else Color(0x12FFFFFF),
+            shape = RoundedCornerShape(50),
+            border = if (showCompleted) BorderStroke(1.dp, GlassBorder) else null
+        ) {
+            Text(
+                "Activos · $activeCount",
+                color = if (!showCompleted) Color.White else MutedText,
+                fontWeight = if (!showCompleted) FontWeight.Bold else FontWeight.Normal,
+                fontSize = 12.sp,
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+            )
         }
-        Surface(color = Color(0x12FFFFFF), shape = RoundedCornerShape(50), border = BorderStroke(1.dp, GlassBorder)) {
-            Text("Completados", color = MutedText, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp))
+        Surface(
+            modifier = Modifier.clip(RoundedCornerShape(50)).clickable(onClick = onShowCompleted),
+            color = if (showCompleted) ActiveTeal else Color(0x12FFFFFF),
+            shape = RoundedCornerShape(50),
+            border = if (!showCompleted) BorderStroke(1.dp, GlassBorder) else null
+        ) {
+            Text(
+                "Completados · $completedCount",
+                color = if (showCompleted) Color.White else MutedText,
+                fontWeight = if (showCompleted) FontWeight.Bold else FontWeight.Normal,
+                fontSize = 12.sp,
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+            )
         }
     }
 }
@@ -189,8 +310,8 @@ private fun ProjectStatusLegend(expanded: Boolean, onToggle: () -> Unit) {
     val duration = motionDurationMillis(240)
     val rows = listOf(
         listOf<ProjectStatus?>(ProjectStatus.Initial, ProjectStatus.Medium),
-        listOf(ProjectStatus.NoTime, ProjectStatus.Overtime),
-        listOf(ProjectStatus.Finished, null)
+        listOf(ProjectStatus.NoTime, ProjectStatus.Finished),
+        listOf(ProjectStatus.Overtime, null)
     )
     val shape = RoundedCornerShape(16.dp)
     Surface(
@@ -260,8 +381,20 @@ private fun LegendChevron(expanded: Boolean) {
 }
 
 @Composable
-fun ProjectCard(project: Project, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun ProjectCard(project: Project, selected: Boolean, onClick: () -> Unit, iconRes: Int = R.drawable.ic_icono_1, modifier: Modifier = Modifier, onFinish: (() -> Unit)? = null) {
     val accent = Color(project.status.color)
+    val isFinished = project.status == ProjectStatus.Finished
+    val completionPulse = rememberInfiniteTransition(label = "Pulso de proyecto terminado")
+    val pulseAlpha by completionPulse.animateFloat(
+        initialValue = 1f,
+        targetValue = 0.55f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1100),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "Brillo turquesa"
+    )
+    val finishedAlpha = if (isFinished) pulseAlpha else 1f
     val animatedProgress by animateFloatAsState(
         targetValue = project.progress,
         animationSpec = tween(durationMillis = motionDurationMillis(420)),
@@ -277,10 +410,17 @@ fun ProjectCard(project: Project, selected: Boolean, onClick: () -> Unit, modifi
     ) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                ProjectStatusIcon(accent)
+                Box(Modifier.graphicsLayer { alpha = finishedAlpha }) {
+                    ProjectStatusIcon(accent, iconRes)
+                }
                 Column(Modifier.weight(1f).padding(start = 12.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text(project.name, color = MainText, fontSize = 17.sp, lineHeight = 21.sp)
                     Text("${project.client} · ${project.description}", color = MutedText, fontSize = 12.sp)
+                }
+                if (onFinish != null) {
+                    TextButton(onClick = onFinish) {
+                        Text("Terminar", color = PrimaryTeal, fontSize = 12.sp)
+                    }
                 }
                 if (selected) {
                     Box(Modifier.size(28.dp).background(ActiveTeal, CircleShape), contentAlignment = Alignment.Center) { CheckGlyph() }
@@ -293,7 +433,8 @@ fun ProjectCard(project: Project, selected: Boolean, onClick: () -> Unit, modifi
                 }
                 LinearProgressIndicator(
                     progress = { animatedProgress },
-                    modifier = Modifier.fillMaxWidth().height(5.dp).clip(CircleShape),
+                    modifier = Modifier.fillMaxWidth().height(5.dp).clip(CircleShape)
+                        .graphicsLayer { alpha = finishedAlpha },
                     color = accent,
                     trackColor = Color(0x14FFFFFF)
                 )
@@ -303,13 +444,29 @@ fun ProjectCard(project: Project, selected: Boolean, onClick: () -> Unit, modifi
 }
 
 @Composable
-private fun ProjectStatusIcon(accent: Color) {
-    Canvas(Modifier.size(38.dp)) {
-        drawCircle(accent.copy(alpha = .18f), size.minDimension / 2)
-        drawCircle(accent, size.minDimension * .12f, Offset(size.width * .33f, size.height * .35f))
-        drawCircle(accent, size.minDimension * .12f, Offset(size.width * .65f, size.height * .35f))
-        drawCircle(accent, size.minDimension * .12f, Offset(size.width * .50f, size.height * .66f))
+private fun ProjectStatusIcon(accent: Color, iconRes: Int) {
+    Box(
+        modifier = Modifier
+            .size(42.dp)
+            .clip(CircleShape)
+            .background(accent.copy(alpha = .18f)),
+        contentAlignment = Alignment.Center
+    ) {
+        Image(
+            painter = painterResource(iconRes),
+            contentDescription = "Icono del proyecto",
+            modifier = Modifier.size(24.dp),
+            contentScale = ContentScale.Fit
+        )
     }
+}
+
+private fun projectIconResource(index: Int): Int = when (index) {
+    0 -> R.drawable.ic_icono_1
+    1 -> R.drawable.ic_icono_2
+    2 -> R.drawable.ic_icono_3
+    3 -> R.drawable.ic_icono_4
+    else -> R.drawable.ic_icono_1
 }
 
 @Composable
@@ -337,3 +494,79 @@ private fun ChevronGlyph() {
     }
 }
 
+
+
+@Composable
+private fun CreateProjectDialog(
+    isSaving: Boolean,
+    error: String?,
+    onDismiss: () -> Unit,
+    onCreate: (String, String, String, Int, Int) -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+    var client by remember { mutableStateOf("") }
+    var description by remember { mutableStateOf("") }
+    var hours by remember { mutableStateOf("40") }
+    var selectedIcon by remember { mutableStateOf(0) }
+    val parsedHours = hours.toIntOrNull()
+    val valid = name.isNotBlank() && client.isNotBlank() && description.isNotBlank() &&
+        parsedHours != null && parsedHours in 1..100000
+    val colors = OutlinedTextFieldDefaults.colors(
+        focusedTextColor = MainText, unfocusedTextColor = MainText,
+        focusedBorderColor = PrimaryTeal, unfocusedBorderColor = GlassBorder,
+        focusedLabelColor = PrimaryTeal, unfocusedLabelColor = MutedText,
+        cursorColor = PrimaryTeal
+    )
+    Dialog(onDismissRequest = { if (!isSaving) onDismiss() }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp).imePadding()
+                .clip(RoundedCornerShape(24.dp)).background(Color(0xFF0C1529))
+                .border(1.dp, GlassBorder, RoundedCornerShape(24.dp))
+                .verticalScroll(rememberScrollState()).padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text("Crear proyecto", color = MainText, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+            Text("Agrega un proyecto a tu espacio de trabajo.", color = MutedText, fontSize = 13.sp)
+            OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Nombre del proyecto") },
+                modifier = Modifier.fillMaxWidth(), singleLine = true, colors = colors)
+            OutlinedTextField(value = client, onValueChange = { client = it }, label = { Text("Cliente o empresa") },
+                modifier = Modifier.fillMaxWidth(), singleLine = true, colors = colors)
+            OutlinedTextField(value = description, onValueChange = { description = it }, label = { Text("Descripción") },
+                modifier = Modifier.fillMaxWidth(), minLines = 2, maxLines = 3, colors = colors)
+            OutlinedTextField(value = hours, onValueChange = { value -> hours = value.filter(Char::isDigit).take(6) },
+                label = { Text("Horas estimadas") }, modifier = Modifier.fillMaxWidth(), singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), colors = colors)
+            Text("Ícono del proyecto", color = MainText, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                (0..3).forEach { index ->
+                    val selected = selectedIcon == index
+                    Box(
+                        modifier = Modifier.weight(1f)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(if (selected) Color(0x3030B2A6) else Color(0x12FFFFFF))
+                            .border(1.dp, if (selected) PrimaryTeal else GlassBorder, RoundedCornerShape(14.dp))
+                            .clickable(enabled = !isSaving) { selectedIcon = index }
+                            .padding(vertical = 12.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Image(
+                            painter = painterResource(projectIconResource(index)),
+                            contentDescription = "Seleccionar ícono ${index + 1}",
+                            modifier = Modifier.size(40.dp)
+                        )
+                    }
+                }
+            }
+            if (error != null) Text(error, color = Color(0xFFFF8585), fontSize = 12.sp)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+                TextButton(onClick = onDismiss, enabled = !isSaving) { Text("Cancelar", color = MutedText) }
+                Button(onClick = { if (valid) onCreate(name, client, description, parsedHours!!, selectedIcon) },
+                    enabled = valid && !isSaving,
+                    colors = ButtonDefaults.buttonColors(containerColor = ActiveTeal),
+                    shape = RoundedCornerShape(12.dp)) {
+                    Text(if (isSaving) "Guardando..." else "Crear proyecto", color = Color.White)
+                }
+            }
+        }
+    }
+}

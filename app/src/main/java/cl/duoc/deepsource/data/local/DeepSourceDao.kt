@@ -38,6 +38,9 @@ interface DeepSourceDao {
     suspend fun insertProjects(projects: List<ProjectEntity>)
 
     @Insert
+    suspend fun insertProject(project: ProjectEntity)
+
+    @Insert
     suspend fun insertTimeEntries(entries: List<TimeEntryEntity>)
 
     @Insert
@@ -45,6 +48,9 @@ interface DeepSourceDao {
 
     @Insert
     suspend fun markSeeded(marker: SeedStateEntity)
+
+    @Query("UPDATE projects SET isCompleted = 1 WHERE id = :projectId AND isCompleted = 0")
+    suspend fun finishProject(projectId: String): Int
 
     @Query("UPDATE projects SET registeredMinutes = registeredMinutes + :minutes WHERE id = :projectId")
     suspend fun addMinutes(projectId: String, minutes: Int): Int

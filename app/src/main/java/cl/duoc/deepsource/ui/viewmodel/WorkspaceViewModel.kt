@@ -45,11 +45,15 @@ data class RegisterTimeUiState(
     val isSaving: Boolean = false,
     val message: String? = null,
     val isError: Boolean = false,
-    val receipt: TimeReceipt? = null
+    val receipt: TimeReceipt? = null,
+    val durationTouched: Boolean = false,
+    val taskTouched: Boolean = false
 ) {
     val durationMinutes: Int get() = (hours.toIntOrNull() ?: 0) * 60 + (minutes.toIntOrNull() ?: 0)
     val isValid: Boolean get() = hours.toIntOrNull()?.let { it in 0..23 } == true &&
         minutes.toIntOrNull()?.let { it in 0..59 } == true && durationMinutes > 0 && task.isNotBlank()
+    val durationError: String? get() = if (durationTouched && durationMinutes == 0) "Debes ingresar una duración mayor a cero." else null
+    val taskError: String? get() = if (taskTouched && task.isBlank()) "Ingresa el nombre de la tarea." else null
 }
 
 data class TimeReceipt(
@@ -62,6 +66,12 @@ data class TimeReceipt(
     val durationLabel: String
         get() = "${durationMinutes / 60} h ${(durationMinutes % 60).toString().padStart(2, '0')} min"
 }
+
+data class CreateProjectUiState(
+    val isSaving: Boolean = false,
+    val error: String? = null,
+    val createdProjectId: String? = null
+)
 
 class WorkspaceViewModel(
     private val repository: DeepSourceRepository,
@@ -94,6 +104,42 @@ class WorkspaceViewModel(
     ))
     val registerState: StateFlow<RegisterTimeUiState> = _registerState.asStateFlow()
 
+    private val _createProjectState = MutableStateFlow(CreateProjectUiState())
+    val createProjectState: StateFlow<CreateProjectUiState> = _createProjectState.asStateFlow()
+
+    fun resetCreateProjectState() {
+        if (!_createProjectState.value.isSaving) _createProjectState.value = CreateProjectUiState()
+    }
+
+    fun createProject(name: String, client: String, description: String, totalHours: Int, iconIndex: Int) {
+        if (_createProjectState.value.isSaving) return
+        _createProjectState.value = CreateProjectUiState(isSaving = true)
+        viewModelScope.launch {
+            try {
+                val project = repository.createProject(name, client, description, totalHours, iconIndex)
+                runCatching { refreshWidget() }
+                _createProjectState.value = CreateProjectUiState(createdProjectId = project.id)
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                _createProjectState.value = CreateProjectUiState(error = error.message ?: "No se pudo crear el proyecto.")
+            }
+        }
+    }
+
+    fun finishProject(projectId: String) {
+        viewModelScope.launch {
+            try {
+                repository.finishProject(projectId)
+                runCatching { refreshWidget() }
+            } catch (error: CancellationException) {
+                throw error
+            } catch (error: Exception) {
+                _uiState.update { it.copy(error = error.message ?: "No se pudo terminar el proyecto.") }
+            }
+        }
+    }
+
     init {
         viewModelScope.launch {
             try {
@@ -125,6 +171,14 @@ class WorkspaceViewModel(
     fun setMinutes(value: String) = changeForm("minutes", value) { it.copy(minutes = value) }
     fun setTask(value: String) = changeForm("task", value) { it.copy(task = value) }
 
+    fun markDurationTouched() {
+        _registerState.update { it.copy(durationTouched = true) }
+    }
+
+    fun markTaskTouched() {
+        _registerState.update { it.copy(taskTouched = true) }
+    }
+
     private fun changeForm(key: String, value: String, update: (RegisterTimeUiState) -> RegisterTimeUiState) {
         savedStateHandle[key] = value
         _registerState.update(update)
@@ -148,6 +202,7 @@ class WorkspaceViewModel(
                 _registerState.update {
                     it.copy(hours = "00", minutes = "00", task = "", isSaving = false,
                         message = null, isError = false,
+                        durationTouched = false, taskTouched = false,
                         receipt = TimeReceipt(entry.id, project.name, entry.note, entry.date, entry.durationMinutes))
                 }
             } catch (error: CancellationException) {

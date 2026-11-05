@@ -15,7 +15,9 @@ data class ProjectEntity(
     val description: String,
     val client: String,
     val registeredMinutes: Int,
-    val totalMinutes: Int
+    val totalMinutes: Int,
+    val isCompleted: Boolean = false,
+    val iconIndex: Int = 0
 )
 
 @Entity(tableName = "users")
@@ -46,8 +48,8 @@ data class TimeEntryEntity(
 @Entity(tableName = "seed_state")
 data class SeedStateEntity(@PrimaryKey val id: Int = 1)
 
-fun ProjectEntity.toDomain() = Project(id, name, description, client, registeredMinutes, totalMinutes)
-fun Project.toEntity() = ProjectEntity(id, name, description, client, registeredMinutes, totalMinutes)
+fun ProjectEntity.toDomain() = Project(id, name, description, client, registeredMinutes, totalMinutes, isCompleted, iconIndex)
+fun Project.toEntity() = ProjectEntity(id, name, description, client, registeredMinutes, totalMinutes, isCompleted, iconIndex)
 fun UserEntity.toDomain() = User(id, name, email)
 fun User.toEntity() = UserEntity(id, name, email)
 fun TimeEntryEntity.toDomain() = TimeEntry(id, projectId, userId, durationMinutes, date, note)

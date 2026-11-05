@@ -2,7 +2,6 @@ package cl.duoc.deepsource.ui.component
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,7 +13,6 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -24,6 +22,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -41,38 +40,71 @@ fun DeepSourceBottomNavigation(
     onProfile: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Row(
-        modifier
+    Box(
+        modifier = modifier
             .fillMaxWidth()
-            .background(NavigationSurface)
-            .border(1.dp, NavigationBorder)
+            .background(
+                Brush.horizontalGradient(
+                    colorStops = arrayOf(
+                        0f to Color(0xFF081327),
+                        .35f to Color(0xFF10243A),
+                        .70f to Color(0xFF0B2B36),
+                        1f to Color(0xFF081A2B)
+                    )
+                )
+            )
             .navigationBarsPadding()
-            .padding(horizontal = 18.dp, vertical = 9.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly
+            .padding(horizontal = 18.dp, vertical = 10.dp)
     ) {
-        NavigationItem("Proyectos", DeepSourceTab.Projects, activeTab, onProjects)
-        NavigationItem("Registro", DeepSourceTab.Register, activeTab, onRegister)
-        NavigationItem("Perfil", DeepSourceTab.Profile, activeTab, onProfile)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            NavigationItem("Proyectos", DeepSourceTab.Projects, activeTab, onProjects)
+            NavigationItem("Registro", DeepSourceTab.Register, activeTab, onRegister)
+            NavigationItem("Perfil", DeepSourceTab.Profile, activeTab, onProfile)
+        }
     }
 }
 
 @Composable
-private fun NavigationItem(label: String, tab: DeepSourceTab, activeTab: DeepSourceTab, onClick: () -> Unit) {
+private fun NavigationItem(
+    label: String,
+    tab: DeepSourceTab,
+    activeTab: DeepSourceTab,
+    onClick: () -> Unit
+) {
     val active = tab == activeTab
     val tint = if (active) NavigationActive else NavigationInactive
+    val shape = RoundedCornerShape(16.dp)
+
     Column(
         modifier = Modifier
-            .width(88.dp)
-            .height(48.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .background(if (active) NavigationActive.copy(alpha = .11f) else Color.Transparent)
+            .width(92.dp)
+            .height(52.dp)
+            .clip(shape)
+            .background(
+                if (active) {
+                    Brush.verticalGradient(
+                        listOf(Color(0x3342C7B8), Color(0x1642C7B8), Color.Transparent)
+                    )
+                } else {
+                    Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent))
+                }
+            )
             .clickable(onClick = onClick)
-            .padding(vertical = 4.dp),
+            .padding(vertical = 5.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(3.dp)
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         NavigationGlyph(tab, tint)
-        Text(label, color = tint, fontSize = 10.sp, fontWeight = if (active) FontWeight.Bold else FontWeight.Medium)
+        Text(
+            text = label,
+            color = tint,
+            fontSize = 10.sp,
+            fontWeight = if (active) FontWeight.Bold else FontWeight.Medium
+        )
     }
 }
 
@@ -82,7 +114,7 @@ private fun NavigationGlyph(tab: DeepSourceTab, tint: Color) {
         val stroke = Stroke(1.8.dp.toPx(), cap = StrokeCap.Round)
         when (tab) {
             DeepSourceTab.Projects -> {
-                drawRoundRect(tint, Offset(size.width * .12f, size.height * .25f), Size(size.width * .76f, size.height * .58f), CornerRadius(3.dp.toPx()), stroke)
+                drawRoundRect(tint, Offset(size.width * .12f, size.height * .25f), Size(size.width * .76f, size.height * .58f), CornerRadius(3.dp.toPx()), style = stroke)
                 drawLine(tint, Offset(size.width * .32f, size.height * .40f), Offset(size.width * .32f, size.height * .65f), 1.8.dp.toPx(), StrokeCap.Round)
                 drawLine(tint, Offset(size.width * .62f, size.height * .35f), Offset(size.width * .62f, size.height * .58f), 1.8.dp.toPx(), StrokeCap.Round)
             }
@@ -99,7 +131,5 @@ private fun NavigationGlyph(tab: DeepSourceTab, tint: Color) {
     }
 }
 
-private val NavigationSurface = Color(0xF20C1529)
-private val NavigationBorder = Color(0x26FFFFFF)
-private val NavigationActive = Color(0xFF42C7B8)
-private val NavigationInactive = Color(0xFF7D8AA7)
+private val NavigationActive = Color(0xFF42D9C5)
+private val NavigationInactive = Color(0xFF91A1BA)

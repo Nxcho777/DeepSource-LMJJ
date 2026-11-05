@@ -59,6 +59,34 @@ class DeepSourceRepository(private val database: DeepSourceDatabase) {
         }
     }
 
+    suspend fun createProject(name: String, client: String, description: String, totalHours: Int, iconIndex: Int): Project {
+        val cleanName = name.trim()
+        val cleanClient = client.trim()
+        val cleanDescription = description.trim()
+        require(cleanName.isNotEmpty()) { "Ingresa el nombre del proyecto." }
+        require(cleanClient.isNotEmpty()) { "Ingresa el cliente o empresa." }
+        require(cleanDescription.isNotEmpty()) { "Ingresa una descripción." }
+        require(iconIndex in 0..3) { "Selecciona un ícono válido." }
+        require(totalHours in 1..100000) { "Las horas deben estar entre 1 y 100000." }
+        seedIfNeeded()
+        val project = Project(
+            id = UUID.randomUUID().toString(),
+            name = cleanName,
+            description = cleanDescription,
+            client = cleanClient,
+            registeredMinutes = 0,
+            totalMinutes = totalHours * 60,
+            iconIndex = iconIndex
+        )
+        dao.insertProject(project.toEntity())
+        return project
+    }
+
+    suspend fun finishProject(projectId: String) {
+        seedIfNeeded()
+        require(dao.finishProject(projectId) == 1) { "El proyecto ya está terminado o no existe." }
+    }
+
     suspend fun seedIfNeeded() {
         database.withTransaction {
             if (!dao.isSeeded()) {

@@ -6,10 +6,12 @@ data class Project(
     val description: String,
     val client: String,
     val registeredMinutes: Int,
-    val totalMinutes: Int
+    val totalMinutes: Int,
+    val isCompleted: Boolean = false,
+    val iconIndex: Int = 0
 ) {
     val status: ProjectStatus
-        get() = ProjectStatus.fromMinutes(registeredMinutes, totalMinutes)
+        get() = if (isCompleted) ProjectStatus.Finished else ProjectStatus.fromMinutes(registeredMinutes, totalMinutes)
 
     val progress: Float
         get() = if (totalMinutes == 0) 0f else (registeredMinutes.toFloat() / totalMinutes).coerceIn(0f, 1f)
@@ -28,19 +30,19 @@ data class Project(
  * the traditional RemoteViews widget cannot drift apart.
  */
 enum class ProjectStatus(val label: String, val color: Long) {
-    Initial("Inicial", 0xFF20EAA7),
-    Medium("Medio", 0xFFF4F653),
-    NoTime("Sin tiempo", 0xFFE43939),
-    Overtime("Sobretiempo", 0xFF313131),
-    Finished("Terminado", 0xFF18CBE8);
+    Initial("Sin iniciar · 0 %", 0xFF3B82F6),
+    Medium("En progreso · 1–49 %", 0xFFFACC15),
+    NoTime("Avanzado · 50–100 %", 0xFFEF4444),
+    Overtime("Sobretiempo · >100 %", 0xFF242424),
+    Finished("Terminado manualmente", 0xFF30B2A6);
 
     companion object {
         fun fromMinutes(registeredMinutes: Int, totalMinutes: Int): ProjectStatus = when {
-            registeredMinutes <= 0 -> NoTime
-            totalMinutes > 0 && registeredMinutes > totalMinutes -> Overtime
-            totalMinutes > 0 && registeredMinutes == totalMinutes -> Finished
-            totalMinutes > 0 && registeredMinutes.toFloat() / totalMinutes <= .25f -> Initial
-            else -> Medium
+            registeredMinutes <= 0 -> Initial
+            totalMinutes <= 0 -> Overtime
+            registeredMinutes > totalMinutes -> Overtime
+            registeredMinutes.toDouble() / totalMinutes < 0.50 -> Medium
+            else -> NoTime
         }
     }
 }

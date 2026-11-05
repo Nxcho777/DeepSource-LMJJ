@@ -1,5 +1,6 @@
 package cl.duoc.deepsource.ui.viewmodel
 
+import android.util.Patterns
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.createSavedStateHandle
@@ -14,7 +15,10 @@ data class LoginUiState(
     val username: String = "marina.soto@deepsource.cl",
     val password: String = "deepsource",
     val passwordVisible: Boolean = false,
-    val rememberMe: Boolean = true
+    val rememberMe: Boolean = true,
+    val usernameError: String? = null,
+    val passwordError: String? = null,
+    val loginError: String? = null
 )
 
 /** The demo login has no authentication service yet; navigation stays in the NavHost. */
@@ -32,12 +36,12 @@ class LoginViewModel(private val savedStateHandle: SavedStateHandle) : ViewModel
 
     fun setUsername(value: String) {
         savedStateHandle["username"] = value
-        _uiState.update { it.copy(username = value) }
+        _uiState.update { it.copy(username = value, usernameError = null, loginError = null) }
     }
 
     fun setPassword(value: String) {
         savedStateHandle["password"] = value
-        _uiState.update { it.copy(password = value) }
+        _uiState.update { it.copy(password = value, passwordError = null, loginError = null) }
     }
 
     fun togglePasswordVisibility() = _uiState.update { it.copy(passwordVisible = !it.passwordVisible) }
@@ -45,5 +49,36 @@ class LoginViewModel(private val savedStateHandle: SavedStateHandle) : ViewModel
     fun setRememberMe(value: Boolean) {
         savedStateHandle["rememberMe"] = value
         _uiState.update { it.copy(rememberMe = value) }
+    }
+
+    fun validateLogin(): Boolean {
+        val email = _uiState.value.username.trim()
+        val password = _uiState.value.password
+        val usernameError = when {
+            email.isBlank() -> "Ingresa tu correo electrónico."
+            !Patterns.EMAIL_ADDRESS.matcher(email).matches() -> "Ingresa un correo electrónico válido."
+            else -> null
+        }
+        val passwordError = if (password.isBlank()) "Ingresa tu contraseña." else null
+
+        if (usernameError != null || passwordError != null) {
+            _uiState.update {
+                it.copy(usernameError = usernameError, passwordError = passwordError, loginError = null)
+            }
+            return false
+        }
+
+        // Este proyecto solo tiene las credenciales demostrativas existentes.
+        if (!email.equals("marina.soto@deepsource.cl", ignoreCase = true) || password != "deepsource") {
+            _uiState.update {
+                it.copy(usernameError = null, passwordError = null, loginError = "Correo o contraseña incorrectos.")
+            }
+            return false
+        }
+
+        _uiState.update {
+            it.copy(usernameError = null, passwordError = null, loginError = null)
+        }
+        return true
     }
 }

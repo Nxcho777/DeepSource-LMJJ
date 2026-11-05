@@ -11,15 +11,17 @@ import cl.duoc.deepsource.ui.DeepSourceApp
 import cl.duoc.deepsource.ui.theme.DeepSourceTheme
 import cl.duoc.deepsource.ui.WidgetNavigationRequest
 import cl.duoc.deepsource.navigation.AppDestination
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 
 class MainActivity : ComponentActivity() {
-    private var startDestination by mutableStateOf(AppDestination.Login.route)
+    private var startDestination by mutableStateOf(AppDestination.Splash.route)
     private var widgetRequest by mutableStateOf<WidgetNavigationRequest?>(null)
     private var requestNumber = 0L
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
         super.onCreate(savedInstanceState)
-        startDestination = intent.getStringExtra(EXTRA_DESTINATION) ?: AppDestination.Login.route
+        startDestination = intent.getStringExtra(EXTRA_DESTINATION) ?: AppDestination.Splash.route
         handleNavigationIntent(intent)
         setContent {
             DeepSourceTheme {
