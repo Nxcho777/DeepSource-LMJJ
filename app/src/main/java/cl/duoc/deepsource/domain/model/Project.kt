@@ -1,3 +1,4 @@
+
 package cl.duoc.deepsource.domain.model
 
 data class Project(
@@ -30,9 +31,9 @@ data class Project(
  * the traditional RemoteViews widget cannot drift apart.
  */
 enum class ProjectStatus(val label: String, val color: Long) {
-    Initial("Sin iniciar · 0 %", 0xFF3B82F6),
-    Medium("En progreso · 1–49 %", 0xFFFACC15),
-    NoTime("Avanzado · 50–100 %", 0xFFEF4444),
+    Initial("Inicial · 0–64 %", 0xFF3B82F6),
+    Medium("En progreso · 65–89 %", 0xFFFACC15),
+    NoTime("Avanzado · 90–100 %", 0xFFEF4444),
     Overtime("Sobretiempo · >100 %", 0xFF242424),
     Finished("Terminado manualmente", 0xFF30B2A6);
 
@@ -41,7 +42,8 @@ enum class ProjectStatus(val label: String, val color: Long) {
             registeredMinutes <= 0 -> Initial
             totalMinutes <= 0 -> Overtime
             registeredMinutes > totalMinutes -> Overtime
-            registeredMinutes.toDouble() / totalMinutes < 0.50 -> Medium
+            registeredMinutes.toDouble() / totalMinutes < 0.65 -> Initial
+            registeredMinutes.toDouble() / totalMinutes < 0.90 -> Medium
             else -> NoTime
         }
     }

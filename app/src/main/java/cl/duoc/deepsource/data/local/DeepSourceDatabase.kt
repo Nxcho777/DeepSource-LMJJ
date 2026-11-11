@@ -1,3 +1,4 @@
+
 package cl.duoc.deepsource.data.local
 
 import android.content.Context
@@ -9,7 +10,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [ProjectEntity::class, UserEntity::class, TimeEntryEntity::class, SeedStateEntity::class],
-    version = 3,
+    version = 4,
     exportSchema = true
 )
 abstract class DeepSourceDatabase : RoomDatabase() {
@@ -27,7 +28,18 @@ abstract class DeepSourceDatabase : RoomDatabase() {
         private val MIGRATION_2_3 = object : Migration(2, 3) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE projects ADD COLUMN iconIndex INTEGER NOT NULL DEFAULT 0")
+
                 // Keep the original icons for the four bundled sample projects.
+                db.execSQL("UPDATE projects SET iconIndex = 1 WHERE id = 'project-2'")
+                db.execSQL("UPDATE projects SET iconIndex = 2 WHERE id = 'project-3'")
+                db.execSQL("UPDATE projects SET iconIndex = 3 WHERE id = 'project-4'")
+            }
+        }
+
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Restore the correct icons for the bundled sample projects.
+                db.execSQL("UPDATE projects SET iconIndex = 0 WHERE id = 'project-1'")
                 db.execSQL("UPDATE projects SET iconIndex = 1 WHERE id = 'project-2'")
                 db.execSQL("UPDATE projects SET iconIndex = 2 WHERE id = 'project-3'")
                 db.execSQL("UPDATE projects SET iconIndex = 3 WHERE id = 'project-4'")
@@ -38,7 +50,7 @@ abstract class DeepSourceDatabase : RoomDatabase() {
 
         fun getInstance(context: Context): DeepSourceDatabase = instance ?: synchronized(this) {
             instance ?: Room.databaseBuilder(context.applicationContext, DeepSourceDatabase::class.java, DATABASE_NAME)
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                 .build()
                 .also { instance = it }
         }

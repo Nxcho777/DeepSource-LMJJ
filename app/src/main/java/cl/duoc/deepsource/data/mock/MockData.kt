@@ -19,10 +19,26 @@ object MockData {
     )
 
     val projects = listOf(
-        Project("project-1", "Proyecto Atlas", "Producto", "Deep Source", 10 * 60, 40 * 60),
-        Project("project-2", "App Boreal", "Mobile", "Nébula Labs", 25 * 60, 60 * 60),
-        Project("project-3", "Portal Nova", "Web", "Nova Retail", 50 * 60, 50 * 60),
-        Project("project-4", "Lumen CRM", "Research", "Lumen Co.", 75 * 60, 90 * 60)
+        Project(
+            "project-1", "Proyecto Atlas", "Producto",
+            "Deep Source", 10 * 60, 40 * 60,
+            iconIndex = 0
+        ),
+        Project(
+            "project-2", "App Boreal", "Mobile",
+            "Nébula Labs", 25 * 60, 60 * 60,
+            iconIndex = 1
+        ),
+        Project(
+            "project-3", "Portal Nova", "Web",
+            "Nova Retail", 50 * 60, 50 * 60,
+            iconIndex = 2
+        ),
+        Project(
+            "project-4", "Lumen CRM", "Research",
+            "Lumen Co.", 75 * 60, 90 * 60,
+            iconIndex = 3
+        )
     )
 
     // Project minutes are existing totals; this entry is historical detail within that total.

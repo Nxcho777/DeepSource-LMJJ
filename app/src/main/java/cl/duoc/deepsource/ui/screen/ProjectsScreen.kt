@@ -1,3 +1,4 @@
+
 package cl.duoc.deepsource.ui.screen
 
 import androidx.compose.foundation.BorderStroke
@@ -112,35 +113,77 @@ fun ProjectsScreen(viewModel: WorkspaceViewModel, onRegisterTime: () -> Unit, on
             modifier = Modifier.fillMaxSize().statusBarsPadding(),
             contentPadding = PaddingValues(bottom = 24.dp)
         ) {
-            item { ProjectsHeader() }
+            item { ProjectsHeader(onProfile = onProfile) }
             item {
                 Column(
                     modifier = Modifier.padding(start = 16.dp, top = 20.dp, end = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    ProjectIntro()
-                    Surface(
-                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).clickable {
-                            viewModel.resetCreateProjectState()
-                            createDialogOpen = true
-                        },
-                        color = Color(0x1F2AAE9E),
-                        shape = RoundedCornerShape(14.dp),
-                        border = BorderStroke(1.dp, PrimaryTeal)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Text("+", color = PrimaryTeal, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                            Text("Crear proyecto", color = MainText, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                        Box(modifier = Modifier.weight(1f)) {
+                            ProjectIntro()
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .size(34.dp)
+                                .clip(CircleShape)
+                                .background(Color(0x1A42C7B8))
+                                .border(1.dp, PrimaryTeal, CircleShape)
+                                .clickable {
+                                    statusLegendExpanded = !statusLegendExpanded
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            InfoGlyph()
                         }
                     }
-                    ProjectFilter(
-                        showCompleted = showCompleted,
-                        activeCount = activeProjects.size,
-                        completedCount = completedProjects.size,
-                        onShowActive = { showCompleted = false },
-                        onShowCompleted = { showCompleted = true }
-                    )
-                    ProjectStatusLegend(statusLegendExpanded) { statusLegendExpanded = !statusLegendExpanded }
+
+                    AnimatedVisibility(
+                        visible = statusLegendExpanded,
+                        enter = fadeIn(tween(motionDurationMillis(240))) +
+                                expandVertically(tween(motionDurationMillis(240))),
+                        exit = fadeOut(tween(motionDurationMillis(240))) +
+                                shrinkVertically(tween(motionDurationMillis(240)))
+                    ) {
+                        ProjectStatusLegend(true) {
+                            statusLegendExpanded = false
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Box(modifier = Modifier.weight(1f)) {
+                            ProjectFilter(
+                                showCompleted = showCompleted,
+                                activeCount = activeProjects.size,
+                                completedCount = completedProjects.size,
+                                onShowActive = { showCompleted = false },
+                                onShowCompleted = { showCompleted = true }
+                            )
+                        }
+
+                        Surface(
+                            modifier = Modifier.clip(RoundedCornerShape(14.dp)).clickable {
+                                viewModel.resetCreateProjectState()
+                                createDialogOpen = true
+                            },
+                            color = Color(0x1F2AAE9E),
+                            shape = RoundedCornerShape(14.dp),
+                            border = BorderStroke(1.dp, PrimaryTeal)
+                        ) {
+                            Row(Modifier.padding(horizontal = 9.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text("+", color = PrimaryTeal, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                                Text("Crear", color = MainText, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                            }
+                        }
+                    }
                 }
             }
             item { Spacer(Modifier.height(16.dp)) }
@@ -168,7 +211,9 @@ fun ProjectsScreen(viewModel: WorkspaceViewModel, onRegisterTime: () -> Unit, on
                         onRegisterTime()
                     },
                     iconRes = projectIconResource(project.iconIndex),
-                    onFinish = if (project.isCompleted) null else { { projectToFinish = project } },
+                    onFinish = if (project.status != ProjectStatus.Finished && project.progress >= 1f) {
+                        { projectToFinish = project }
+                    } else null,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 5.5.dp)
                 )
             }
@@ -225,32 +270,47 @@ private fun ProjectsAmbientBackground() {
 }
 
 @Composable
-private fun ProjectsHeader() {
+private fun ProjectsHeader(onProfile: () -> Unit) {
     Surface(
-        modifier = Modifier.fillMaxWidth().height(72.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(72.dp),
         color = Color(0x08FFFFFF),
-        border = BorderStroke(1.dp, Color.Transparent)
+        shadowElevation = 0.dp
     ) {
         Row(
-            modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Image(
                 painter = painterResource(R.drawable.deepsource_logo),
-                contentDescription = "Deep Source",
-                modifier = Modifier.width(108.dp).height(33.dp),
+                contentDescription = "DeepSource",
+                modifier = Modifier
+                    .width(144.dp)
+                    .height(38.dp),
                 contentScale = ContentScale.Fit
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier.size(38.dp).background(Color(0x12FFFFFF), RoundedCornerShape(14.dp)).clip(RoundedCornerShape(14.dp)),
-                    contentAlignment = Alignment.Center
-                ) { SearchGlyph() }
-                Box(
-                    modifier = Modifier.size(38.dp).background(Color(0x2942C7B8), CircleShape).clip(CircleShape),
-                    contentAlignment = Alignment.Center
-                ) { Text("MS", color = PrimaryTeal, fontWeight = FontWeight.Bold, fontSize = 13.sp) }
+
+            Box(
+                modifier = Modifier
+                    .size(38.dp)
+                    .clip(CircleShape)
+                    .background(
+                        Color(0x2942C7B8),
+                        CircleShape
+                    )
+                    .clickable(onClick = onProfile),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "MS",
+                    color = PrimaryTeal,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp
+                )
             }
         }
     }
@@ -273,7 +333,7 @@ private fun ProjectFilter(
     onShowActive: () -> Unit,
     onShowCompleted: () -> Unit
 ) {
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
         Surface(
             modifier = Modifier.clip(RoundedCornerShape(50)).clickable(onClick = onShowActive),
             color = if (!showCompleted) ActiveTeal else Color(0x12FFFFFF),
@@ -284,8 +344,9 @@ private fun ProjectFilter(
                 "Activos · $activeCount",
                 color = if (!showCompleted) Color.White else MutedText,
                 fontWeight = if (!showCompleted) FontWeight.Bold else FontWeight.Normal,
-                fontSize = 12.sp,
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+                fontSize = 11.sp,
+                maxLines = 1,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp)
             )
         }
         Surface(
@@ -298,8 +359,9 @@ private fun ProjectFilter(
                 "Completados · $completedCount",
                 color = if (showCompleted) Color.White else MutedText,
                 fontWeight = if (showCompleted) FontWeight.Bold else FontWeight.Normal,
-                fontSize = 12.sp,
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+                fontSize = 11.sp,
+                maxLines = 1,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp)
             )
         }
     }
@@ -494,8 +556,6 @@ private fun ChevronGlyph() {
     }
 }
 
-
-
 @Composable
 private fun CreateProjectDialog(
     isSaving: Boolean,
@@ -510,13 +570,14 @@ private fun CreateProjectDialog(
     var selectedIcon by remember { mutableStateOf(0) }
     val parsedHours = hours.toIntOrNull()
     val valid = name.isNotBlank() && client.isNotBlank() && description.isNotBlank() &&
-        parsedHours != null && parsedHours in 1..100000
+            parsedHours != null && parsedHours in 1..100000
     val colors = OutlinedTextFieldDefaults.colors(
         focusedTextColor = MainText, unfocusedTextColor = MainText,
         focusedBorderColor = PrimaryTeal, unfocusedBorderColor = GlassBorder,
         focusedLabelColor = PrimaryTeal, unfocusedLabelColor = MutedText,
         cursorColor = PrimaryTeal
     )
+
     Dialog(onDismissRequest = { if (!isSaving) onDismiss() }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp).imePadding()

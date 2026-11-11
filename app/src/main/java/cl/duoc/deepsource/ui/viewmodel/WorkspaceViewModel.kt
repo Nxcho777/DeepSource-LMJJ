@@ -14,7 +14,6 @@ import cl.duoc.deepsource.domain.model.User
 import cl.duoc.deepsource.notification.AndroidTimeEntryNotifier
 import cl.duoc.deepsource.notification.TimeEntryNotifier
 import cl.duoc.deepsource.widget.DeepSourceWidgetProvider
-import java.time.LocalDate
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,7 +21,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-
+import java.time.DayOfWeek
+import java.time.LocalDate
+import java.time.temporal.TemporalAdjusters
 data class WorkspaceUiState(
     val projects: List<Project> = emptyList(),
     val users: List<User> = emptyList(),
@@ -51,7 +52,7 @@ data class RegisterTimeUiState(
 ) {
     val durationMinutes: Int get() = (hours.toIntOrNull() ?: 0) * 60 + (minutes.toIntOrNull() ?: 0)
     val isValid: Boolean get() = hours.toIntOrNull()?.let { it in 0..23 } == true &&
-        minutes.toIntOrNull()?.let { it in 0..59 } == true && durationMinutes > 0 && task.isNotBlank()
+            minutes.toIntOrNull()?.let { it in 0..59 } == true && durationMinutes > 0 && task.isNotBlank()
     val durationError: String? get() = if (durationTouched && durationMinutes == 0) "Debes ingresar una duración mayor a cero." else null
     val taskError: String? get() = if (taskTouched && task.isBlank()) "Debes ingresar el nombre de la tarea." else null
 }
@@ -187,6 +188,27 @@ class WorkspaceViewModel(
     fun saveTimeEntry() {
         val form = _registerState.value
         val workspace = _uiState.value
+        val today = LocalDate.now()
+        val previousWeekMonday = today
+            .with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+            .minusWeeks(1)
+        val selectedDate = runCatching { LocalDate.parse(form.date) }.getOrNull()
+        val validDate = selectedDate != null &&
+                !selectedDate.isBefore(previousWeekMonday) &&
+                !selectedDate.isAfter(today) &&
+                selectedDate.dayOfWeek != DayOfWeek.SATURDAY &&
+                selectedDate.dayOfWeek != DayOfWeek.SUNDAY
+
+        if (!validDate) {
+            _registerState.update {
+                it.copy(
+                    message = "Solo puedes registrar horas de lunes a viernes, durante la semana anterior o la semana actual hasta hoy.",
+                    isError = true
+                )
+            }
+            return
+        }
+
         if (form.isSaving || form.receipt != null || !form.isValid || workspace.isLoading) return
         val project = workspace.selectedProject ?: return
         val user = workspace.users.firstOrNull { it.id == form.userId } ?: return
