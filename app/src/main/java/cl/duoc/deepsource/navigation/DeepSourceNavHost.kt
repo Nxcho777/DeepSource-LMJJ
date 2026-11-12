@@ -10,14 +10,13 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -27,6 +26,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import cl.duoc.deepsource.ui.screen.SplashScreen
 
+import cl.duoc.deepsource.ui.components.DeepSourceAnimatedBackground
 import cl.duoc.deepsource.ui.component.DeepSourceBottomNavigation
 import cl.duoc.deepsource.ui.component.DeepSourceTab
 import cl.duoc.deepsource.ui.screen.LoginScreen
@@ -111,23 +111,14 @@ fun DeepSourceNavHost(
 
     // El NavHost anima solamente el contenido.
     // La barra inferior está fuera del NavHost.
-    Column(
-        modifier = Modifier.fillMaxSize()
-    ) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Una unica aurora compartida por las pantallas y la barra inferior.
+        DeepSourceAnimatedBackground(modifier = Modifier.fillMaxSize())
+
         NavHost(
             navController = navController,
             startDestination = startDestination,
-            modifier = Modifier
-                .weight(1f)
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            Color(0xFF071326),
-                            Color(0xFF0B2035),
-                            Color(0xFF102F36)
-                        )
-                    )
-                ),
+            modifier = Modifier.fillMaxSize(),
 
             enterTransition = {
                 val from = tabIndex(
@@ -292,10 +283,11 @@ fun DeepSourceNavHost(
             }
         }
 
-        // BARRA INFERIOR FIJA
+        // BARRA INFERIOR SUPERPUESTA
         // No participa en las animaciones del NavHost.
         if (activeTab != null) {
             DeepSourceBottomNavigation(
+                modifier = Modifier.align(Alignment.BottomCenter),
                 activeTab = activeTab,
                 onProjects = {
                     navController.navigateTab(
@@ -314,7 +306,7 @@ fun DeepSourceNavHost(
                 }
             )
         }
-    }
+    } // Box
 }
 
 fun NavHostController.navigateTab(route: String) {

@@ -70,6 +70,7 @@ import cl.duoc.deepsource.notification.NotificationPermissionStore
 import cl.duoc.deepsource.ui.component.DeepSourceBottomNavigation
 import cl.duoc.deepsource.ui.component.DeepSourceTab
 import cl.duoc.deepsource.ui.viewmodel.WorkspaceViewModel
+import cl.duoc.deepsource.ui.components.DeepSourceAnimatedBackground
 
 private val ProfileSurface = Color(0xFF080D1C)
 private val ProfileText = Color(0xFFF7FAFF)
@@ -145,12 +146,11 @@ fun ProfileScreen(viewModel: WorkspaceViewModel, onProjects: () -> Unit, onRegis
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val completed = state.profileProjects
     val currentUser = state.currentUser
-    Box(Modifier.fillMaxSize().background(ProfileSurface)) {
-        ProfileAmbientBackground()
+    Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize().statusBarsPadding()) {
             ProfileHeader()
             Column(
-                modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp),
+                modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 132.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Column(Modifier.widthIn(max = 440.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -209,7 +209,7 @@ private fun ProfileHeader() {
 private fun ProfileIdentity(user: User?) {
     val shape = RoundedCornerShape(20.dp)
     Row(
-        modifier = Modifier.fillMaxWidth().height(90.dp).clip(shape).background(Color(0xB810214E)).border(1.dp, Color(0x3DFFFFFF), shape).padding(14.dp),
+        modifier = Modifier.fillMaxWidth().height(90.dp).clip(shape).background(Color(0x90142035)).border(1.dp, Color(0x3DFFFFFF), shape).padding(14.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -239,7 +239,7 @@ private fun ProfileOptions(
     onNotificationsCheckedChange: (Boolean) -> Unit
 ) {
     val shape = RoundedCornerShape(20.dp)
-    Column(Modifier.fillMaxWidth().clip(shape).background(Color(0x12FFFFFF)).border(1.dp, ProfileBorder, shape)) {
+    Column(Modifier.fillMaxWidth().clip(shape).background(Color(0x90142035)).border(1.dp, ProfileBorder, shape)) {
         ProfileOption("Editar perfil", "Modifica tus datos personales", OptionIcon.User, OptionEnd.Chevron)
         OptionDivider()
         ProfileOption("Privacidad", "Configura la privacidad de tu cuenta", OptionIcon.Lock, OptionEnd.Chevron)
@@ -302,7 +302,7 @@ private fun ProfileOption(
 private fun CompletedProjectCard(project: Project) {
     val shape = RoundedCornerShape(16.dp)
     Row(
-        Modifier.fillMaxWidth().height(56.dp).clip(shape).background(Color(0x12FFFFFF)).border(1.dp, ProfileBorder, shape).padding(horizontal = 12.dp),
+        Modifier.fillMaxWidth().height(56.dp).clip(shape).background(Color(0x90142035)).border(1.dp, ProfileBorder, shape).padding(horizontal = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

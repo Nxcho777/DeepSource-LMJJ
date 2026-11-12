@@ -1,4 +1,3 @@
-
 package cl.duoc.deepsource.ui.screen
 
 import androidx.compose.foundation.BorderStroke
@@ -79,6 +78,8 @@ import cl.duoc.deepsource.ui.component.DeepSourceTab
 import cl.duoc.deepsource.ui.animation.motionDurationMillis
 import cl.duoc.deepsource.ui.viewmodel.WorkspaceViewModel
 import androidx.compose.foundation.border
+import cl.duoc.deepsource.ui.components.DeepSourceAnimatedBackground
+
 
 private val ScreenBackground = Color(0xFF080D1C)
 private val PrimaryTeal = Color(0xFF42C7B8)
@@ -107,11 +108,10 @@ fun ProjectsScreen(viewModel: WorkspaceViewModel, onRegisterTime: () -> Unit, on
     val completedProjects = state.projects.filter { it.status == ProjectStatus.Finished }
     val visibleProjects = if (showCompleted) completedProjects else activeProjects
 
-    Box(modifier = Modifier.fillMaxSize().background(ScreenBackground)) {
-        ProjectsAmbientBackground()
+    Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
             modifier = Modifier.fillMaxSize().statusBarsPadding(),
-            contentPadding = PaddingValues(bottom = 24.dp)
+            contentPadding = PaddingValues(bottom = 132.dp)
         ) {
             item { ProjectsHeader(onProfile = onProfile) }
             item {
@@ -320,7 +320,7 @@ private fun ProjectsHeader(onProfile: () -> Unit) {
 private fun ProjectIntro() {
     Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
         Text("ESPACIO DE MARINA", color = PrimaryTeal, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-        Text("Selecciona un proyecto", color = MainText, fontSize = 28.sp, lineHeight = 34.sp)
+        //Text("Selecciona un proyecto", color = MainText, fontSize = 28.sp, lineHeight = 34.sp)
         Text("El proyecto activo se usará en tu próximo registro de horario.", color = MutedText, fontSize = 13.sp, lineHeight = 19.sp)
     }
 }
@@ -465,7 +465,7 @@ fun ProjectCard(project: Project, selected: Boolean, onClick: () -> Unit, iconRe
     val cardShape = RoundedCornerShape(20.dp)
     Surface(
         modifier = modifier.fillMaxWidth().clip(cardShape).clickable(onClick = onClick),
-        color = if (selected) Color(0x1F39BFAF) else Color(0x12FFFFFF),
+        color = if (selected) Color(0xAA153C42) else Color(0x90142035),
         shape = cardShape,
         border = BorderStroke(if (selected) 1.5.dp else 1.dp, if (selected) PrimaryTeal else GlassBorder),
         shadowElevation = if (selected) 10.dp else 0.dp
@@ -509,7 +509,7 @@ fun ProjectCard(project: Project, selected: Boolean, onClick: () -> Unit, iconRe
 private fun ProjectStatusIcon(accent: Color, iconRes: Int) {
     Box(
         modifier = Modifier
-            .size(42.dp)
+            .size(52.dp)
             .clip(CircleShape)
             .background(accent.copy(alpha = .18f)),
         contentAlignment = Alignment.Center
@@ -517,7 +517,7 @@ private fun ProjectStatusIcon(accent: Color, iconRes: Int) {
         Image(
             painter = painterResource(iconRes),
             contentDescription = "Icono del proyecto",
-            modifier = Modifier.size(24.dp),
+            modifier = Modifier.size(34.dp),
             contentScale = ContentScale.Fit
         )
     }

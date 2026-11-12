@@ -89,6 +89,7 @@ import java.time.format.DateTimeFormatter
 import java.util.Locale
 import kotlin.math.abs
 import androidx.compose.ui.window.DialogProperties
+import cl.duoc.deepsource.ui.components.DeepSourceAnimatedBackground
 
 private val RegisterSurface = Color(0xFF080D1C)
 private val RegisterText = Color(0xFFF7FAFF)
@@ -129,21 +130,20 @@ fun RegisterTimeScreen(viewModel: WorkspaceViewModel, onProjects: () -> Unit, on
         durationPickerOpen = true
     }
 
-    Box(Modifier.fillMaxSize().background(RegisterSurface)) {
-        RegisterAmbientBackground()
+    Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize().statusBarsPadding()) {
             RegisterHeader()
             Column(
                 modifier = Modifier
                     .weight(1f)
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 20.dp, vertical = 18.dp),
+                    .padding(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 132.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Column(Modifier.widthIn(max = 440.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text("NUEVO REGISTRO", color = RegisterTeal, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        Text("Nuevo registro de ${user?.name ?: "usuario"}", color = RegisterText, fontSize = 28.sp, lineHeight = 34.sp)
+                        Text("${user?.name ?: "usuario"}", color = RegisterText, fontSize = 28.sp, lineHeight = 34.sp)
                     }
                     if (workspace.isLoading) Text("Cargando datos...", color = RegisterMuted, fontSize = 12.sp)
                     if (offerNotificationPermission) {
@@ -329,7 +329,7 @@ fun RegisterTimeScreen(viewModel: WorkspaceViewModel, onProjects: () -> Unit, on
                     Text("Selecciona el proyecto para este registro.", color = RegisterMuted, fontSize = 13.sp)
                     Column(Modifier.heightIn(max = 380.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         workspace.projects.forEachIndexed { index, option ->
-                            val iconRes = projectIconForIndex(index)
+                            val iconRes = projectIconForIndex(option.iconIndex)
                             Row(
                                 modifier = Modifier.fillMaxWidth()
                                     .clip(RoundedCornerShape(14.dp))
@@ -468,13 +468,13 @@ private fun projectIconForIndex(projectIndex: Int): Int = when (projectIndex) {
 
 @Composable
 private fun SelectedProjectCard(project: Project, projectIndex: Int, onClick: () -> Unit) {
-    val iconRes = projectIconForIndex(projectIndex)
+    val iconRes = projectIconForIndex(project.iconIndex)
     Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
         Text("Proyecto", color = RegisterMuted, fontSize = 12.sp)
         Row(
             modifier = Modifier.fillMaxWidth()
                 .clip(RoundedCornerShape(18.dp))
-                .background(Color(0x1939BFAF))
+                .background(Color(0x90142035))
                 .border(1.dp, RegisterBorder, RoundedCornerShape(18.dp))
                 .clickable(onClick = onClick)
                 .padding(14.dp),
@@ -502,7 +502,7 @@ private fun DateField(date: LocalDate, onClick: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
         Text("Fecha", color = RegisterMuted, fontSize = 12.sp)
         Row(
-            modifier = Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(14.dp)).background(Color(0x12FFFFFF)).border(1.dp, RegisterBorder, RoundedCornerShape(14.dp)).clickable(onClick = onClick).padding(horizontal = 14.dp),
+            modifier = Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(14.dp)).background(Color(0x90142035)).border(1.dp, RegisterBorder, RoundedCornerShape(14.dp)).clickable(onClick = onClick).padding(horizontal = 14.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -537,7 +537,7 @@ private fun RegisterTextField(
                     }
                 }
                 .fillMaxWidth().height(52.dp).clip(RoundedCornerShape(14.dp))
-                .background(Color(0x12FFFFFF))
+                .background(Color(0x90142035))
                 .border(1.dp, if (errorMessage != null) RegisterError else RegisterBorder, RoundedCornerShape(14.dp)),
             textStyle = TextStyle(color = RegisterText, fontSize = 15.sp),
             cursorBrush = SolidColor(RegisterText),
@@ -573,7 +573,7 @@ private fun DurationSelectionField(label: String, value: String, modifier: Modif
         Text(label, color = RegisterMuted, fontSize = 12.sp)
         Row(
             Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(14.dp))
-                .background(Color(0x12FFFFFF))
+                .background(Color(0x90142035))
                 .border(1.dp, if (hasError) RegisterError else RegisterBorder, RoundedCornerShape(14.dp))
                 .clickable(onClick = onClick).padding(horizontal = 14.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -705,7 +705,7 @@ private fun DurationSummary(hours: String, minutes: String) {
     val hoursText = hours.ifBlank { "0" }
     val minutesText = minutes.ifBlank { "00" }.padStart(2, '0')
     Row(
-        Modifier.fillMaxWidth().height(72.dp).clip(RoundedCornerShape(20.dp)).background(Color(0x1942C7B8)).border(1.dp, Color(0x4D42C7B8), RoundedCornerShape(20.dp)).padding(horizontal = 18.dp),
+        Modifier.fillMaxWidth().height(72.dp).clip(RoundedCornerShape(20.dp)).background(Color(0x90142035)).border(1.dp, Color(0x4D42C7B8), RoundedCornerShape(20.dp)).padding(horizontal = 18.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -725,4 +725,3 @@ private fun DurationSummary(hours: String, minutes: String) {
 @Composable private fun DownGlyph() { Canvas(Modifier.size(16.dp)) { drawLine(RegisterMuted, Offset(size.width * .25f, size.height * .38f), Offset(size.width * .50f, size.height * .63f), 1.8.dp.toPx(), StrokeCap.Round); drawLine(RegisterMuted, Offset(size.width * .50f, size.height * .63f), Offset(size.width * .75f, size.height * .38f), 1.8.dp.toPx(), StrokeCap.Round) } }
 @Composable private fun ChevronGlyph() { Canvas(Modifier.size(20.dp)) { drawLine(RegisterMuted, Offset(size.width * .38f, size.height * .22f), Offset(size.width * .64f, size.height * .50f), 1.8.dp.toPx(), StrokeCap.Round); drawLine(RegisterMuted, Offset(size.width * .64f, size.height * .50f), Offset(size.width * .38f, size.height * .78f), 1.8.dp.toPx(), StrokeCap.Round) } }
 @Composable private fun CheckGlyph() { Canvas(Modifier.size(18.dp)) { drawLine(Color.White, Offset(size.width * .18f, size.height * .52f), Offset(size.width * .42f, size.height * .74f), 1.9.dp.toPx(), StrokeCap.Round); drawLine(Color.White, Offset(size.width * .42f, size.height * .74f), Offset(size.width * .82f, size.height * .25f), 1.9.dp.toPx(), StrokeCap.Round) } }
-
