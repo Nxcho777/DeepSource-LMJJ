@@ -189,9 +189,13 @@ private fun DeepSourceAuthenticatedContent(
 
     LaunchedEffect(widgetRequest?.sequence) {
         widgetRequest?.let { request ->
-            request.projectId?.let(workspaceViewModel::selectProject)
-            if (tabsController.currentDestination?.route != AppDestination.RegisterTime.route) {
-                tabsController.navigateTab(AppDestination.RegisterTime.route)
+            val target = if (request.destination == AppDestination.Profile.route)
+                AppDestination.Profile.route else AppDestination.RegisterTime.route
+            if (target == AppDestination.RegisterTime.route) {
+                request.projectId?.let(workspaceViewModel::selectProject)
+            }
+            if (tabsController.currentDestination?.route != target) {
+                tabsController.navigateTab(target)
             }
         }
     }

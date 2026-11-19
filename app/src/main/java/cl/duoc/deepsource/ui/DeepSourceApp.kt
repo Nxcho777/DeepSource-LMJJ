@@ -7,7 +7,7 @@ import androidx.navigation.compose.rememberNavController
 import cl.duoc.deepsource.navigation.DeepSourceNavHost
 import cl.duoc.deepsource.ui.viewmodel.WorkspaceViewModel
 
-data class WidgetNavigationRequest(val sequence: Long, val projectId: String?)
+data class WidgetNavigationRequest(val sequence: Long, val projectId: String?, val destination: String = "register_time")
 
 @Composable
 fun DeepSourceApp(

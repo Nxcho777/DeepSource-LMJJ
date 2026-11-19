@@ -2,8 +2,8 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_project_row"
     android:layout_width="match_parent"
-    android:layout_height="43dp"
-    android:background="@drawable/widget_row"
+    android:layout_height="45dp"
+    android:background="@android:color/transparent"
     android:gravity="center_vertical"
     android:orientation="horizontal"
     android:paddingStart="7dp"
@@ -11,8 +11,8 @@
 
     <ImageView
         android:id="@+id/widget_project_icon"
-        android:layout_width="30dp"
-        android:layout_height="30dp"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
         android:padding="4dp"
         android:background="@drawable/widget_icon_background"
         android:contentDescription="Ícono del proyecto" />

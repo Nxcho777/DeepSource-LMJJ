@@ -10,6 +10,7 @@ internal object WidgetTimer {
     fun showDetail(context: Context,id: Int) { prefs(context).edit().putBoolean(key(id,"detail"),true).apply() }
     fun showList(context: Context,id: Int) { prefs(context).edit().putBoolean(key(id,"detail"),false).apply() }
     fun project(context: Context, id: Int) = prefs(context).getString(key(id,"project"), null)
+    fun iconIndex(context: Context,id: Int) = prefs(context).getInt(key(id,"iconIndex"),0)
     fun name(context: Context, id: Int) = prefs(context).getString(key(id,"name"), "") ?: ""
     fun status(context: Context, id: Int) = prefs(context).getString(key(id,"status"), "ready") ?: "ready"
     private fun stored(context: Context, id: Int) = prefs(context).getLong(key(id,"accumulated"), 0L)
@@ -22,10 +23,34 @@ internal object WidgetTimer {
         val delta = if (monoDelta >= 0L) monoDelta else (System.currentTimeMillis() - startWall).coerceAtLeast(0L)
         return saved + delta.coerceAtLeast(0L)
     }
-    fun select(context: Context, id: Int, projectId: String, projectName: String) {
-        prefs(context).edit().putString(key(id,"project"),projectId).putString(key(id,"name"),projectName)
+    fun select(context: Context, id: Int, projectId: String, projectName: String, iconIndex: Int) {
+        prefs(context).edit().putString(key(id,"project"),projectId).putString(key(id,"name"),projectName).putInt(key(id,"iconIndex"),iconIndex)
             .putBoolean(key(id,"detail"),true).putString(key(id,"status"),"ready").putLong(key(id,"accumulated"),0L).apply()
     }
+    fun selectOrRestore(context: Context, id: Int, projectId: String, projectName: String, iconIndex: Int) {
+        val current = project(context,id)
+        if (current == projectId) {
+            showDetail(context,id)
+            return
+        }
+        // No se permite cambiar el proyecto mientras el cronómetro está corriendo:
+        // se evita asignar accidentalmente horas al proyecto equivocado.
+        if (current != null && status(context,id) == "running") {
+            showDetail(context,id)
+            return
+        }
+        val pref = prefs(context)
+        if (current != null && status(context,id) == "paused") {
+            pref.edit().putLong(key(id,"saved.$current"),elapsed(context,id)).apply()
+        }
+        val saved = pref.getLong(key(id,"saved.$projectId"),0L)
+        select(context,id,projectId,projectName,iconIndex)
+        if (saved > 0L) {
+            pref.edit().putLong(key(id,"accumulated"),saved)
+                .putString(key(id,"status"),"paused").apply()
+        }
+    }
+
     fun start(context: Context, id: Int) {
         if (project(context,id)==null || status(context,id)=="running") return
         prefs(context).edit().putLong(key(id,"startMono"),SystemClock.elapsedRealtime())
@@ -45,7 +70,9 @@ internal object WidgetTimer {
         prefs(context).edit().putString(key(id,"status"),"paused").apply()
     }
     fun clear(context: Context,id: Int) {
+        val current = project(context,id)
+        if (current != null) prefs(context).edit().remove(key(id,"saved.$current")).apply()
         prefs(context).edit().remove(key(id,"project")).remove(key(id,"name"))
-            .remove(key(id,"status")).remove(key(id,"detail")).remove(key(id,"accumulated")).apply()
+            .remove(key(id,"status")).remove(key(id,"iconIndex")).remove(key(id,"detail")).remove(key(id,"accumulated")).apply()
     }
 }

@@ -37,8 +37,13 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handleNavigationIntent(intent: Intent) {
-        if (intent.getStringExtra(EXTRA_DESTINATION) == AppDestination.RegisterTime.route) {
-            widgetRequest = WidgetNavigationRequest(++requestNumber, intent.getStringExtra(EXTRA_PROJECT_ID))
+        val destination = intent.getStringExtra(EXTRA_DESTINATION)
+        if (destination == AppDestination.RegisterTime.route || destination == AppDestination.Profile.route) {
+            widgetRequest = WidgetNavigationRequest(
+                ++requestNumber,
+                if (destination == AppDestination.RegisterTime.route) intent.getStringExtra(EXTRA_PROJECT_ID) else null,
+                destination!!
+            )
         }
     }
 

@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_background"
+    android:clipToOutline="true">
+    <ImageView
+        android:id="@+id/widget_aurora_animation"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:src="@drawable/widget_aurora_animation"
+        android:contentDescription="Fondo Aurora animado" />
+<LinearLayout
+    android:id="@+id/widget_timer_root"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:paddingLeft="11dp" android:paddingRight="11dp"
+    android:paddingTop="5dp" android:paddingBottom="6dp"
+    android:background="#3D071827">
+    <LinearLayout
+        android:id="@+id/widget_header"
+        android:layout_width="match_parent"
+        android:layout_height="32dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+            <ImageView
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:src="@drawable/ic_splash_logo"
+                android:scaleType="fitCenter"
+                android:contentDescription="Logo DeepSource" />
+            <ImageView
+                android:layout_width="116dp"
+                android:layout_height="26dp"
+                android:layout_marginLeft="5dp"
+                android:src="@drawable/ic_splash_text"
+                android:scaleType="fitStart"
+                android:contentDescription="DeepSource" />
+        </LinearLayout>
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:paddingLeft="8dp"
+            android:paddingRight="5dp"
+            android:text="•••"
+            android:textSize="17sp"
+            android:textColor="#B4D1DF" />
+    </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#28556B" />
+        <LinearLayout
+            android:id="@+id/widget_timer_panel"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center_horizontal"
+            android:baselineAligned="false"
+            android:visibility="visible"
+            android:paddingLeft="3dp"
+            android:paddingRight="3dp">
+            <TextView
+                android:id="@+id/widget_back"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="20dp"
+                android:gravity="center_vertical"
+                android:text="‹  Proyectos"
+                android:textSize="12sp"
+                android:textColor="#A8B5CC" />
+            <!-- Grupo centrado: proyecto, panel del reloj y estado. -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:paddingTop="3dp"
+                android:paddingBottom="3dp">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:orientation="horizontal"
+                    android:paddingBottom="8dp">
+                    <ImageView
+                        android:id="@+id/widget_selected_icon"
+                        android:layout_width="44dp"
+                        android:layout_height="44dp"
+                        android:layout_marginRight="9dp"
+                        android:src="@drawable/ic_icono_1"
+                        android:scaleType="fitCenter"
+                        android:contentDescription="Icono del proyecto" />
+                    <TextView
+                        android:id="@+id/widget_selected_name"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:maxLines="2"
+                        android:ellipsize="end"
+                        android:gravity="center_vertical"
+                        android:textStyle="bold"
+                        android:textColor="#F4FAFF"
+                        android:textSize="20sp" />
+                </LinearLayout>
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:paddingLeft="9dp"
+                    android:paddingRight="9dp"
+                    android:paddingTop="4dp"
+                    android:paddingBottom="4dp"
+                    >
+                    <Chronometer
+                        android:id="@+id/widget_timer"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center"
+                        android:textSize="32sp"
+                        android:textStyle="bold"
+                        android:textColor="#FFFFFF" />
+                    <TextView
+                        android:id="@+id/widget_timer_status"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="3dp"
+                        android:paddingLeft="12dp"
+                        android:paddingRight="12dp"
+                        android:paddingTop="2dp"
+                        android:paddingBottom="2dp"
+                        android:gravity="center"
+                        android:textSize="12sp"
+                        android:textColor="#B8D4DD"
+                         />
+                </LinearLayout>
+            </LinearLayout>
+            <TextView
+                android:id="@+id/widget_start"
+                android:layout_width="match_parent"
+                android:layout_height="38dp"
+                android:gravity="center"
+                android:text="▶  Iniciar"
+                android:textStyle="bold"
+                android:textSize="14sp"
+                android:textColor="#FFFFFF"
+                android:background="@drawable/widget_timer_start" />
+            <LinearLayout
+                android:id="@+id/widget_timer_actions"
+                android:layout_width="match_parent"
+                android:layout_height="38dp"
+                android:orientation="horizontal"
+                android:visibility="gone">
+                <TextView
+                    android:id="@+id/widget_pause"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:text="Ⅱ  Pausar"
+                    android:textStyle="bold"
+                    android:textColor="#071827"
+                    android:textSize="12sp"
+                    android:background="@drawable/widget_timer_pause" />
+                <TextView android:layout_width="7dp" android:layout_height="1dp" />
+                <TextView
+                    android:id="@+id/widget_finish"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:gravity="center"
+                    android:text="■  Terminar"
+                    android:textStyle="bold"
+                    android:textColor="#FFFFFF"
+                    android:textSize="12sp"
+                    android:background="@drawable/widget_timer_finish" />
+            </LinearLayout>
+        </LinearLayout>
+</LinearLayout>
+</FrameLayout>

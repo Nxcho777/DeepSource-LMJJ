@@ -116,6 +116,17 @@ private class ProjectListFactory(
                 R.id.widget_progress_teal
         }
 
+        // El fondo del ícono utiliza exactamente el mismo estado que la barra.
+        // Los íconos originales y sus índices no se modifican.
+        val iconBackground = when (project.status) {
+            ProjectStatus.Initial -> R.drawable.widget_icon_progress_blue
+            ProjectStatus.Medium -> R.drawable.widget_icon_progress_yellow
+            ProjectStatus.NoTime -> R.drawable.widget_icon_progress_red
+            ProjectStatus.Overtime -> R.drawable.widget_icon_progress_black
+            ProjectStatus.Finished -> R.drawable.widget_icon_progress_teal
+        }
+        row.setInt(R.id.widget_project_icon, "setBackgroundResource", iconBackground)
+
         val progressBars = listOf(
             R.id.widget_progress_blue,
             R.id.widget_progress_yellow,
@@ -145,11 +156,14 @@ private class ProjectListFactory(
         val clickIntent = Intent().apply {
             putExtra("widget_project_id", project.id)
             putExtra("widget_project_name", project.name)
+            putExtra("widget_project_icon_index", project.iconIndex)
         }
 
+        // La fila completa debe enviar la identidad de SU proyecto, no solo el botón.
+        row.setOnClickFillInIntent(R.id.widget_project_row, clickIntent)
         row.setOnClickFillInIntent(
             R.id.widget_project_action,
-            clickIntent
+            Intent(clickIntent).putExtra("widget_open_register", true)
         )
 
         row.setOnClickFillInIntent(

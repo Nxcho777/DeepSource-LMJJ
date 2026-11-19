@@ -1,145 +1,84 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="11dp"
-    android:background="@drawable/widget_background">
-
+    android:background="@drawable/widget_background"
+    android:clipToOutline="true">
+    <ImageView
+        android:id="@+id/widget_list_aurora_animation"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop"
+        android:src="@drawable/widget_aurora_animation"
+        android:contentDescription="Fondo Aurora de proyectos" />
+<LinearLayout
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:paddingLeft="11dp" android:paddingRight="11dp"
+    android:paddingTop="8dp" android:paddingBottom="8dp"
+    android:background="#3D071827">
     <LinearLayout
         android:id="@+id/widget_header"
         android:layout_width="match_parent"
-        android:layout_height="32dp"
-        android:gravity="center_vertical"
-        android:orientation="horizontal">
-
-        <ImageView
-            android:layout_width="105dp"
-            android:layout_height="30dp"
-            android:src="@drawable/deepsource_logo"
-            android:scaleType="fitStart"
-            android:contentDescription="DeepSource" />
-
+        android:layout_height="34dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+            <ImageView
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:src="@drawable/ic_splash_logo"
+                android:scaleType="fitCenter"
+                android:contentDescription="Logo DeepSource" />
+            <ImageView
+                android:layout_width="116dp"
+                android:layout_height="26dp"
+                android:layout_marginLeft="5dp"
+                android:src="@drawable/ic_splash_text"
+                android:scaleType="fitStart"
+                android:contentDescription="DeepSource" />
+        </LinearLayout>
         <TextView
             android:layout_width="0dp"
             android:layout_height="1dp"
-            android:layout_weight="1"
-            android:text="" />
-
+            android:layout_weight="1" />
         <TextView
+            android:id="@+id/widget_more"
+            android:clickable="true"
+            android:contentDescription="Abrir perfil"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:paddingLeft="8dp"
+            android:paddingRight="5dp"
             android:text="•••"
-            android:textSize="19sp"
+            android:textSize="17sp"
             android:textColor="#B4D1DF" />
-
     </LinearLayout>
 
-    <ListView
-        android:id="@+id/widget_projects"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:divider="@android:color/transparent"
-        android:dividerHeight="3dp"
-        android:scrollbars="none"
-        android:fadeScrollbars="true"
-        android:overScrollMode="never"
-        android:clipToPadding="false" />
+    <TextView android:layout_width="match_parent" android:layout_height="1dp" android:background="#28556B" />
+    <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
+        <ListView
+            android:id="@+id/widget_projects"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:divider="@drawable/widget_project_divider"
+            android:dividerHeight="1dp"
+            android:scrollbars="none"
+            android:overScrollMode="never"
+            android:clipToPadding="false" />
+        <TextView
+            android:id="@+id/widget_empty"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="14dp"
+            android:visibility="gone"
+            android:text="Sin proyectos activos"
+            android:textSize="13sp"
+            android:textColor="#B6CADB" />
 
-    <TextView
-        android:id="@+id/widget_empty"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:padding="14dp"
-        android:visibility="gone"
-        android:text="Sin proyectos activos"
-        android:textSize="13sp"
-        android:textColor="#B6CADB" />
-
-    <LinearLayout
-        android:id="@+id/widget_timer_panel"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:orientation="vertical"
-        android:gravity="center"
-        android:visibility="gone"
-        android:padding="5dp">
-        <TextView
-            android:id="@+id/widget_back"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="‹  Proyectos"
-            android:textSize="12sp"
-            android:textColor="#A8B5CC"
-            android:paddingBottom="5dp"/>
-        <TextView
-            android:id="@+id/widget_selected_name"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:textStyle="bold"
-            android:textColor="#F4FAFF"
-            android:textSize="15sp"
-            android:maxLines="1"/>
-        <Chronometer
-            android:id="@+id/widget_timer"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:gravity="center"
-            android:textSize="27sp"
-            android:textStyle="bold"
-            android:textColor="#FFFFFF"
-            android:format="%s"/>
-        <TextView
-            android:id="@+id/widget_timer_status"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:gravity="center"
-            android:textSize="11sp"
-            android:textColor="#A8B5CC"
-            android:paddingBottom="5dp"/>
-        <TextView
-            android:id="@+id/widget_start"
-            android:layout_width="match_parent"
-            android:layout_height="39dp"
-            android:gravity="center"
-            android:text="▶  Iniciar"
-            android:textStyle="bold"
-            android:textSize="14sp"
-            android:textColor="#FFFFFF"
-            android:background="@drawable/widget_timer_start"/>
-        <LinearLayout
-            android:id="@+id/widget_timer_actions"
-            android:layout_width="match_parent"
-            android:layout_height="39dp"
-            android:orientation="horizontal"
-            android:visibility="gone">
-            <TextView
-                android:id="@+id/widget_pause"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:gravity="center"
-                android:text="Ⅱ  Pausar"
-                android:textStyle="bold"
-                android:textColor="#071827"
-                android:textSize="13sp"
-                android:background="@drawable/widget_timer_pause"/>
-            <TextView android:layout_width="7dp" android:layout_height="1dp"/>
-            <TextView
-                android:id="@+id/widget_finish"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="1"
-                android:gravity="center"
-                android:text="■  Terminar"
-                android:textStyle="bold"
-                android:textColor="#FFFFFF"
-                android:textSize="13sp"
-                android:background="@drawable/widget_timer_finish"/>
-        </LinearLayout>
-    </LinearLayout>
+    </FrameLayout>
 </LinearLayout>
+</FrameLayout>
