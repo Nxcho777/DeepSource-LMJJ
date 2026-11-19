@@ -59,7 +59,8 @@ class DeepSourceRepository(private val database: DeepSourceDatabase) {
         }
     }
 
-    suspend fun createProject(name: String, client: String, description: String, totalHours: Int, iconIndex: Int): Project {
+    suspend fun createProject(actorUserId: String, name: String, client: String, description: String, totalHours: Int, iconIndex: Int): Project {
+        requireAdmin(actorUserId)
         val cleanName = name.trim()
         val cleanClient = client.trim()
         val cleanDescription = description.trim()
@@ -78,13 +79,25 @@ class DeepSourceRepository(private val database: DeepSourceDatabase) {
             totalMinutes = totalHours * 60,
             iconIndex = iconIndex
         )
-        dao.insertProject(project.toEntity())
+        database.withTransaction {
+            requireAdmin(actorUserId)
+            dao.insertProject(project.toEntity())
+        }
         return project
     }
 
-    suspend fun finishProject(projectId: String) {
+    suspend fun finishProject(actorUserId: String, projectId: String) {
+        requireAdmin(actorUserId)
         seedIfNeeded()
-        require(dao.finishProject(projectId) == 1) { "El proyecto ya está terminado o no existe." }
+        database.withTransaction {
+            requireAdmin(actorUserId)
+            require(dao.finishProject(projectId) == 1) { "El proyecto no existe, ya está terminado o no alcanza el 100 %." }
+        }
+    }
+
+    private suspend fun requireAdmin(actorUserId: String) {
+        seedIfNeeded()
+        check(dao.getUser(actorUserId)?.role == "ADMIN") { "No tienes permisos de administrador." }
     }
 
     suspend fun seedIfNeeded() {

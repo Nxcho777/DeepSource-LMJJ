@@ -24,11 +24,13 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.rememberScrollState
@@ -104,13 +106,25 @@ fun ProjectsScreen(viewModel: WorkspaceViewModel, onRegisterTime: () -> Unit, on
             viewModel.resetCreateProjectState()
         }
     }
+    val isAdmin = state.isAdmin
+    LaunchedEffect(isAdmin) {
+        if (!isAdmin) {
+            createDialogOpen = false
+            projectToFinish = null
+        }
+    }
     val activeProjects = state.projects.filter { it.status != ProjectStatus.Finished }
     val completedProjects = state.projects.filter { it.status == ProjectStatus.Finished }
     val visibleProjects = if (showCompleted) completedProjects else activeProjects
 
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
-            modifier = Modifier.fillMaxSize().statusBarsPadding(),
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .widthIn(max = 900.dp)
+                .fillMaxWidth()
+                .fillMaxHeight()
+                .statusBarsPadding(),
             contentPadding = PaddingValues(bottom = 132.dp)
         ) {
             item { ProjectsHeader(onProfile = onProfile) }
@@ -124,7 +138,7 @@ fun ProjectsScreen(viewModel: WorkspaceViewModel, onRegisterTime: () -> Unit, on
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(modifier = Modifier.weight(1f)) {
-                            ProjectIntro()
+                            ProjectIntro(userName = state.currentUser?.name ?: "Usuario")
                         }
 
                         Box(
@@ -169,7 +183,7 @@ fun ProjectsScreen(viewModel: WorkspaceViewModel, onRegisterTime: () -> Unit, on
                             )
                         }
 
-                        Surface(
+                        if (isAdmin) Surface(
                             modifier = Modifier.clip(RoundedCornerShape(14.dp)).clickable {
                                 viewModel.resetCreateProjectState()
                                 createDialogOpen = true
@@ -211,14 +225,14 @@ fun ProjectsScreen(viewModel: WorkspaceViewModel, onRegisterTime: () -> Unit, on
                         onRegisterTime()
                     },
                     iconRes = projectIconResource(project.iconIndex),
-                    onFinish = if (project.status != ProjectStatus.Finished && project.progress >= 1f) {
+                    onFinish = if (isAdmin && project.status != ProjectStatus.Finished && project.progress >= 1f) {
                         { projectToFinish = project }
                     } else null,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 5.5.dp)
                 )
             }
         }
-        projectToFinish?.let { project ->
+        if (isAdmin) projectToFinish?.let { project ->
             androidx.compose.material3.AlertDialog(
                 onDismissRequest = { projectToFinish = null },
                 title = { Text("Terminar proyecto", color = MainText) },
@@ -235,7 +249,7 @@ fun ProjectsScreen(viewModel: WorkspaceViewModel, onRegisterTime: () -> Unit, on
                 containerColor = Color(0xFF111B30)
             )
         }
-        if (createDialogOpen) {
+        if (isAdmin && createDialogOpen) {
             CreateProjectDialog(
                 isSaving = createState.isSaving,
                 error = createState.error,
@@ -317,11 +331,23 @@ private fun ProjectsHeader(onProfile: () -> Unit) {
 }
 
 @Composable
-private fun ProjectIntro() {
-    Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-        Text("ESPACIO DE MARINA", color = PrimaryTeal, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-        //Text("Selecciona un proyecto", color = MainText, fontSize = 28.sp, lineHeight = 34.sp)
-        Text("El proyecto activo se usará en tu próximo registro de horario.", color = MutedText, fontSize = 13.sp, lineHeight = 19.sp)
+private fun ProjectIntro(userName: String) {
+    Column(
+        verticalArrangement = Arrangement.spacedBy(5.dp)
+    ) {
+        Text(
+            text = "ESPACIO DE ${userName.uppercase()}",
+            color = PrimaryTeal,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold
+        )
+
+        Text(
+            text = "El proyecto activo se usará en tu próximo registro de horario.",
+            color = MutedText,
+            fontSize = 13.sp,
+            lineHeight = 19.sp
+        )
     }
 }
 

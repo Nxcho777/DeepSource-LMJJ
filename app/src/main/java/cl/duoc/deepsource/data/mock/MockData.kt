@@ -3,6 +3,7 @@ package cl.duoc.deepsource.data.mock
 import cl.duoc.deepsource.domain.model.Project
 import cl.duoc.deepsource.domain.model.TimeEntry
 import cl.duoc.deepsource.domain.model.User
+import cl.duoc.deepsource.domain.model.UserRole
 
 /** Initial content, read only by the repository when it seeds a new database. */
 object MockData {
@@ -15,7 +16,8 @@ object MockData {
     val users = listOf(
         currentUser,
         User(id = "user-2", name = "Tomás Rojas", email = "tomas.rojas@deepsource.cl"),
-        User(id = "user-3", name = "Camila Vega", email = "camila.vega@deepsource.cl")
+        User(id = "user-3", name = "Camila Vega", email = "camila.vega@deepsource.cl"),
+        User(id = "user-admin", name = "Administrador Demo", email = "admin@deepsource.cl", role = UserRole.ADMIN)
     )
 
     val projects = listOf(

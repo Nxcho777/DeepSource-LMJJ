@@ -49,7 +49,7 @@ interface DeepSourceDao {
     @Insert
     suspend fun markSeeded(marker: SeedStateEntity)
 
-    @Query("UPDATE projects SET isCompleted = 1 WHERE id = :projectId AND isCompleted = 0")
+    @Query("UPDATE projects SET isCompleted = 1 WHERE id = :projectId AND isCompleted = 0 AND registeredMinutes >= totalMinutes")
     suspend fun finishProject(projectId: String): Int
 
     @Query("UPDATE projects SET registeredMinutes = registeredMinutes + :minutes WHERE id = :projectId")

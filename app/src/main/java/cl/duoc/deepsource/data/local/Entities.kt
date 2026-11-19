@@ -7,6 +7,7 @@ import androidx.room.PrimaryKey
 import cl.duoc.deepsource.domain.model.Project
 import cl.duoc.deepsource.domain.model.TimeEntry
 import cl.duoc.deepsource.domain.model.User
+import cl.duoc.deepsource.domain.model.UserRole
 
 @Entity(tableName = "projects")
 data class ProjectEntity(
@@ -24,7 +25,8 @@ data class ProjectEntity(
 data class UserEntity(
     @PrimaryKey val id: String,
     val name: String,
-    val email: String
+    val email: String,
+    val role: String = "USER"
 )
 
 @Entity(
@@ -50,7 +52,7 @@ data class SeedStateEntity(@PrimaryKey val id: Int = 1)
 
 fun ProjectEntity.toDomain() = Project(id, name, description, client, registeredMinutes, totalMinutes, isCompleted, iconIndex)
 fun Project.toEntity() = ProjectEntity(id, name, description, client, registeredMinutes, totalMinutes, isCompleted, iconIndex)
-fun UserEntity.toDomain() = User(id, name, email)
-fun User.toEntity() = UserEntity(id, name, email)
+fun UserEntity.toDomain() = User(id, name, email, runCatching { UserRole.valueOf(role) }.getOrDefault(UserRole.USER))
+fun User.toEntity() = UserEntity(id, name, email, role.name)
 fun TimeEntryEntity.toDomain() = TimeEntry(id, projectId, userId, durationMinutes, date, note)
 fun TimeEntry.toEntity() = TimeEntryEntity(id, projectId, userId, durationMinutes, date, note)

@@ -11,6 +11,7 @@ import cl.duoc.deepsource.data.repository.DeepSourceRepository
 import cl.duoc.deepsource.domain.model.Project
 import cl.duoc.deepsource.domain.model.TimeEntry
 import cl.duoc.deepsource.domain.model.User
+import cl.duoc.deepsource.domain.model.UserRole
 import cl.duoc.deepsource.notification.AndroidTimeEntryNotifier
 import cl.duoc.deepsource.notification.TimeEntryNotifier
 import cl.duoc.deepsource.widget.DeepSourceWidgetProvider
@@ -26,6 +27,7 @@ import java.time.LocalDate
 import java.time.temporal.TemporalAdjusters
 data class WorkspaceUiState(
     val projects: List<Project> = emptyList(),
+    val currentUserId: String = DeepSourceRepository.DEFAULT_USER_ID,
     val users: List<User> = emptyList(),
     val timeEntries: List<TimeEntry> = emptyList(),
     val selectedProjectId: String = "project-1",
@@ -33,7 +35,8 @@ data class WorkspaceUiState(
     val error: String? = null
 ) {
     val selectedProject: Project? get() = projects.firstOrNull { it.id == selectedProjectId } ?: projects.firstOrNull()
-    val currentUser: User? get() = users.firstOrNull { it.id == DeepSourceRepository.DEFAULT_USER_ID }
+    val currentUser: User? get() = users.firstOrNull { it.id == currentUserId }
+    val isAdmin: Boolean get() = currentUser?.role == UserRole.ADMIN
     val profileProjects: List<Project> get() = projects.take(3)
 }
 
@@ -78,7 +81,8 @@ class WorkspaceViewModel(
     private val repository: DeepSourceRepository,
     private val savedStateHandle: SavedStateHandle,
     private val refreshWidget: () -> Unit,
-    private val notifier: TimeEntryNotifier
+    private val notifier: TimeEntryNotifier,
+    private val context: Context
 ) : ViewModel() {
     companion object {
         fun factory(context: Context) = viewModelFactory {
@@ -87,13 +91,14 @@ class WorkspaceViewModel(
                     DeepSourceRepository.getInstance(context),
                     createSavedStateHandle(),
                     { DeepSourceWidgetProvider.requestRefresh(context) },
-                    AndroidTimeEntryNotifier(context)
+                    AndroidTimeEntryNotifier(context),
+                    context.applicationContext
                 )
             }
         }
     }
 
-    private val _uiState = MutableStateFlow(WorkspaceUiState(selectedProjectId = savedStateHandle["projectId"] ?: "project-1"))
+    private val _uiState = MutableStateFlow(WorkspaceUiState(selectedProjectId = savedStateHandle["projectId"] ?: "project-1", currentUserId = savedStateHandle["currentUserId"] ?: DeepSourceRepository.DEFAULT_USER_ID))
     val uiState: StateFlow<WorkspaceUiState> = _uiState.asStateFlow()
 
     private val _registerState = MutableStateFlow(RegisterTimeUiState(
@@ -117,7 +122,7 @@ class WorkspaceViewModel(
         _createProjectState.value = CreateProjectUiState(isSaving = true)
         viewModelScope.launch {
             try {
-                val project = repository.createProject(name, client, description, totalHours, iconIndex)
+                val project = repository.createProject(_uiState.value.currentUserId, name, client, description, totalHours, iconIndex)
                 runCatching { refreshWidget() }
                 _createProjectState.value = CreateProjectUiState(createdProjectId = project.id)
             } catch (error: CancellationException) {
@@ -131,7 +136,7 @@ class WorkspaceViewModel(
     fun finishProject(projectId: String) {
         viewModelScope.launch {
             try {
-                repository.finishProject(projectId)
+                repository.finishProject(_uiState.value.currentUserId, projectId)
                 runCatching { refreshWidget() }
             } catch (error: CancellationException) {
                 throw error
@@ -155,6 +160,26 @@ class WorkspaceViewModel(
                 _uiState.update { it.copy(isLoading = false, error = error.message ?: "No se pudieron cargar los datos.") }
             }
         }
+    }
+
+    fun logout() {
+        // Eliminar la identidad activa y los datos temporales del formulario.
+        savedStateHandle.remove<String>("currentUserId")
+        savedStateHandle.remove<String>("userId")
+        listOf("date", "hours", "minutes", "task").forEach { savedStateHandle.remove<String>(it) }
+        _uiState.update { it.copy(currentUserId = "") }
+        context.getSharedPreferences("deepsource_widget_timer", Context.MODE_PRIVATE).edit().remove("activeUserId").apply()
+        _registerState.value = RegisterTimeUiState(userId = "")
+    }
+
+    fun setCurrentUserByEmail(email: String) {
+        val user = _uiState.value.users.firstOrNull { it.email.equals(email.trim(), ignoreCase = true) }
+        val userId = user?.id ?: if (email.equals("admin@deepsource.cl", true)) "user-admin" else DeepSourceRepository.DEFAULT_USER_ID
+        context.getSharedPreferences("deepsource_widget_timer", Context.MODE_PRIVATE).edit().putString("activeUserId",userId).apply()
+        savedStateHandle["currentUserId"] = userId
+        savedStateHandle["userId"] = userId
+        _uiState.update { it.copy(currentUserId = userId) }
+        _registerState.update { it.copy(userId = userId) }
     }
 
     fun selectProject(id: String) {

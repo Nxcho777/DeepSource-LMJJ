@@ -135,12 +135,13 @@ fun RegisterTimeScreen(viewModel: WorkspaceViewModel, onProjects: () -> Unit, on
             RegisterHeader()
             Column(
                 modifier = Modifier
+                    .fillMaxWidth()
                     .weight(1f)
                     .verticalScroll(rememberScrollState())
                     .padding(start = 20.dp, end = 20.dp, top = 18.dp, bottom = 132.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Column(Modifier.widthIn(max = 440.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Column(Modifier.align(Alignment.CenterHorizontally).widthIn(max = 900.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text("NUEVO REGISTRO", color = RegisterTeal, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         Text("${user?.name ?: "usuario"}", color = RegisterText, fontSize = 28.sp, lineHeight = 34.sp)

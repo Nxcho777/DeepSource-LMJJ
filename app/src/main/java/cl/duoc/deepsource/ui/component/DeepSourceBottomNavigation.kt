@@ -1,28 +1,24 @@
-
 package cl.duoc.deepsource.ui.component
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.rememberCoroutineScope
-import kotlinx.coroutines.launch
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
@@ -33,14 +29,19 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import kotlin.math.abs
 import kotlin.math.min
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.animation.core.animateFloatAsState
+import kotlin.math.sin
+import kotlin.math.PI
+
 
 enum class DeepSourceTab {
     Projects,
@@ -67,9 +68,37 @@ fun DeepSourceBottomNavigation(
         DeepSourceTab.Profile -> 5f / 6f
     }
 
-    var dragFraction by remember { mutableStateOf<Float?>(null) }
-    var barWidth by remember { mutableFloatStateOf(1f) }
+    var dragFraction by remember {
+        mutableStateOf<Float?>(null)
+    }
+
+    var barWidth by remember {
+        mutableFloatStateOf(1f)
+    }
+
+    var dragFlow by remember {
+        mutableFloatStateOf(0f)
+    }
+
     val scope = rememberCoroutineScope()
+
+    // Opción D: iluminación pulsante del contorno.
+    val glowTransition = rememberInfiniteTransition(
+        label = "Glass border glow"
+    )
+
+    val glowPulse by glowTransition.animateFloat(
+        initialValue = 0.62f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(
+                durationMillis = 2400,
+                easing = FastOutSlowInEasing
+            ),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "Glass border pulse"
+    )
 
     val bubblePosition = remember {
         Animatable(target)
@@ -79,87 +108,158 @@ fun DeepSourceBottomNavigation(
         Animatable(1f)
     }
 
-    // Liquid Glass 2.0: comprimir, deslizar y recuperar la forma.
-    // Las animaciones se cancelan correctamente si se pulsa otra pestaña.
+    // Flujo sincronizado: la forma cambia durante TODO el recorrido.
+    val liquidFlow = remember { Animatable(0f) }
+    val travelProgress = remember { Animatable(1f) }
+    var travelDirection by remember { mutableFloatStateOf(0f) }
+
     LaunchedEffect(target) {
-        if (bubblePosition.value != target) {
-            bubbleVisibility.animateTo(
-                targetValue = 0.18f,
-                animationSpec = tween(130, easing = FastOutSlowInEasing)
-            )
-            bubblePosition.animateTo(
-                targetValue = target,
-                animationSpec = tween(320, easing = FastOutSlowInEasing)
-            )
-            bubbleVisibility.animateTo(
-                targetValue = 1f,
-                animationSpec = spring(
-                    dampingRatio = 0.68f,
-                    stiffness = Spring.StiffnessMediumLow
-                )
-            )
+        val start = bubblePosition.value
+        if (kotlin.math.abs(start - target) > 0.0001f) {
+            travelDirection = if (target > start) 1f else -1f
+            travelProgress.snapTo(0f)
+            liquidFlow.snapTo(0f)
+            coroutineScope {
+                launch {
+                    bubblePosition.animateTo(
+                        targetValue = target,
+                        animationSpec = tween(500, easing = FastOutSlowInEasing)
+                    )
+                }
+                launch {
+                    travelProgress.animateTo(
+                        targetValue = 1f,
+                        animationSpec = tween(500, easing = FastOutSlowInEasing)
+                    )
+                    // Breve oscilación de asentamiento al llegar.
+                    liquidFlow.snapTo(-travelDirection * 0.20f)
+                    liquidFlow.animateTo(
+                        0f,
+                        spring(
+                            dampingRatio = 0.65f,
+                            stiffness = Spring.StiffnessMedium
+                        )
+                    )
+                }
+            }
         }
     }
 
-    // El arrastre sigue al dedo; al soltar se selecciona el tercio más cercano.
-    // Los taps normales siguen siendo manejados por clickable en cada botón.
     Box(
         modifier = modifier
             .fillMaxWidth()
             .navigationBarsPadding()
-            .padding(horizontal = 12.dp, vertical = 7.dp)
+            .padding(
+                horizontal = 12.dp,
+                vertical = 7.dp
+            )
             .height(94.dp)
-            .onSizeChanged { barWidth = it.width.toFloat().coerceAtLeast(1f) }
+            .onSizeChanged {
+                barWidth = it.width.toFloat()
+                    .coerceAtLeast(1f)
+            }
             .pointerInput(activeTab) {
+
                 fun fraction(x: Float): Float {
                     val inset = 8.dp.toPx()
-                    return ((x - inset) / (barWidth - 2f * inset).coerceAtLeast(1f))
-                        .coerceIn(1f / 6f, 5f / 6f)
+
+                    return (
+                            (x - inset) /
+                                    (barWidth - 2f * inset)
+                                        .coerceAtLeast(1f)
+                            ).coerceIn(
+                            1f / 6f,
+                            5f / 6f
+                        )
                 }
+
                 detectHorizontalDragGestures(
                     onDragStart = { offset ->
                         dragFraction = fraction(offset.x)
+                        dragFlow = 0f
                     },
-                    onHorizontalDrag = { change, _ ->
-                        dragFraction = fraction(change.position.x)
+
+                    onHorizontalDrag = { change, dragAmount ->
+                        dragFraction = fraction(
+                            change.position.x
+                        )
+
+                        val normalizedMovement = (
+                                dragAmount /
+                                        (barWidth * 0.045f)
+                                            .coerceAtLeast(1f)
+                                ).coerceIn(-1f, 1f)
+
+                        dragFlow = (
+                                dragFlow * 0.55f +
+                                        normalizedMovement * 0.45f
+                                ).coerceIn(-1f, 1f)
+
                         change.consume()
                     },
+
                     onDragEnd = {
                         val released = dragFraction ?: target
+
                         val selected = when {
-                            released < 1f / 3f -> DeepSourceTab.Projects
-                            released < 2f / 3f -> DeepSourceTab.Register
-                            else -> DeepSourceTab.Profile
+                            released < 1f / 3f ->
+                                DeepSourceTab.Projects
+
+                            released < 2f / 3f ->
+                                DeepSourceTab.Register
+
+                            else ->
+                                DeepSourceTab.Profile
                         }
+
                         scope.launch {
                             bubblePosition.snapTo(released)
+                            dragFlow = 0f
                             dragFraction = null
+
                             if (selected == activeTab) {
                                 bubblePosition.animateTo(
-                                    target,
-                                    spring(dampingRatio = 0.78f, stiffness = Spring.StiffnessMedium)
+                                    targetValue = target,
+                                    animationSpec = spring(
+                                        dampingRatio = 0.78f,
+                                        stiffness = Spring.StiffnessMedium
+                                    )
                                 )
                             } else {
                                 when (selected) {
-                                    DeepSourceTab.Projects -> onProjects()
-                                    DeepSourceTab.Register -> onRegister()
-                                    DeepSourceTab.Profile -> onProfile()
+                                    DeepSourceTab.Projects ->
+                                        onProjects()
+
+                                    DeepSourceTab.Register ->
+                                        onRegister()
+
+                                    DeepSourceTab.Profile ->
+                                        onProfile()
                                 }
                             }
                         }
                     },
+
                     onDragCancel = {
                         val released = dragFraction ?: target
+
                         scope.launch {
                             bubblePosition.snapTo(released)
+                            dragFlow = 0f
                             dragFraction = null
-                            bubblePosition.animateTo(target, spring())
+
+                            bubblePosition.animateTo(
+                                targetValue = target,
+                                animationSpec = spring()
+                            )
                         }
                     }
                 )
             }
     ) {
-        Canvas(Modifier.fillMaxSize()) {
+        Canvas(
+            modifier = Modifier.fillMaxSize()
+        ) {
             val w = size.width
             val h = size.height
 
@@ -169,58 +269,108 @@ fun DeepSourceBottomNavigation(
             val bottom = h - 16.dp.toPx()
             val radius = 25.dp.toPx()
 
-            // Alineación exacta con el Row de botones.
             val horizontalPadding = 8.dp.toPx()
             val contentWidth = w - horizontalPadding * 2f
 
-            val centerX =
-                horizontalPadding +
-                        contentWidth * (dragFraction ?: bubblePosition.value)
+            val centerX = horizontalPadding +
+                    contentWidth * (
+                    dragFraction ?: bubblePosition.value
+                    )
 
             val cornerClearance = 2.dp.toPx()
             val safeLeft = left + radius + cornerClearance
             val safeRight = right - radius - cornerClearance
 
-            // Burbuja centrada y adaptada a las esquinas.
+            // Dirección del flujo líquido.
+            val flow = if (dragFraction != null) {
+                dragFlow
+            } else {
+                // Crece en la mitad del recorrido y se reduce al llegar.
+                // No depende de una animación que termine antes que la posición.
+                val movingWave = sin(
+                    (travelProgress.value * PI).toFloat()
+                ) * travelDirection * 0.90f
+                (movingWave + liquidFlow.value).coerceIn(-1f, 1f)
+            }
+
+            val intensity = abs(flow)
+
+            // Estiramiento de la onda.
+            val desiredHalfWidth =
+                65.dp.toPx() +
+                        27.dp.toPx() * intensity
+
             val halfWidth = min(
-                65.dp.toPx(),
+                desiredHalfWidth,
                 min(
                     centerX - safeLeft,
                     safeRight - centerX
                 ).coerceAtLeast(0f)
             )
 
+            val directionalStretch =
+                halfWidth * 0.34f * flow
+
             val bumpStart = centerX - halfWidth
             val bumpEnd = centerX + halfWidth
 
-            val bubbleHeight =
-                9.dp.toPx() * bubbleVisibility.value
+            val bubbleHeight = (
+                    9.dp.toPx() +
+                            3.dp.toPx() * intensity
+                    ) * bubbleVisibility.value
 
             val bumpBottom = bottom + bubbleHeight
 
-            // Curva suave y simétrica.
+            val liquidCenterX = (
+                    centerX + directionalStretch
+                    ).coerceIn(
+                    bumpStart,
+                    bumpEnd
+                )
+
+            // Curva Bézier que cambia de forma
+            // según la dirección del movimiento.
             fun Path.addSmoothBubble() {
-                val tangent = halfWidth * 0.5f
+                val leftSpan =
+                    liquidCenterX - bumpStart
+
+                val rightSpan =
+                    bumpEnd - liquidCenterX
+
+                val leftControlHeight = (
+                        bubbleHeight *
+                                (0.78f - flow * 0.18f)
+                        ).coerceAtLeast(0f)
+
+                val rightControlHeight = (
+                        bubbleHeight *
+                                (0.78f + flow * 0.18f)
+                        ).coerceAtLeast(0f)
 
                 cubicTo(
-                    bumpEnd - tangent,
-                    bottom,
-                    centerX + tangent,
+                    bumpEnd - rightSpan * 0.48f,
+                    bottom + rightControlHeight * 0.10f,
+
+                    liquidCenterX + rightSpan * 0.43f,
                     bumpBottom,
-                    centerX,
+
+                    liquidCenterX,
                     bumpBottom
                 )
 
                 cubicTo(
-                    centerX - tangent,
+                    liquidCenterX - leftSpan * 0.43f,
                     bumpBottom,
-                    bumpStart + tangent,
-                    bottom,
+
+                    bumpStart + leftSpan * 0.48f,
+                    bottom + leftControlHeight * 0.10f,
+
                     bumpStart,
                     bottom
                 )
             }
 
+            // Silueta de la barra.
             val glassPath = Path().apply {
                 moveTo(left + radius, top)
                 lineTo(right - radius, top)
@@ -256,7 +406,7 @@ fun DeepSourceBottomNavigation(
                 close()
             }
 
-            // Fondo de cristal.
+            // Fondo original Liquid Glass.
             drawPath(
                 path = glassPath,
                 brush = Brush.verticalGradient(
@@ -285,6 +435,48 @@ fun DeepSourceBottomNavigation(
                 )
             )
 
+            // Opción D: halo luminoso.
+            val glowBrush = Brush.horizontalGradient(
+                colors = listOf(
+                    Color(0xFF24D5D1),
+                    Color(0xFF49DFFF),
+                    Color(0xFF45C5F1),
+                    Color(0xFF24D5D1)
+                ),
+                startX = left,
+                endX = right
+            )
+
+            drawPath(
+                path = glassPath,
+                brush = glowBrush,
+                alpha = 0.08f * glowPulse,
+                style = Stroke(
+                    width = 11.dp.toPx(),
+                    cap = StrokeCap.Round
+                )
+            )
+
+            drawPath(
+                path = glassPath,
+                brush = glowBrush,
+                alpha = 0.16f * glowPulse,
+                style = Stroke(
+                    width = 6.dp.toPx(),
+                    cap = StrokeCap.Round
+                )
+            )
+
+            drawPath(
+                path = glassPath,
+                brush = glowBrush,
+                alpha = 0.45f * glowPulse,
+                style = Stroke(
+                    width = 2.2.dp.toPx(),
+                    cap = StrokeCap.Round
+                )
+            )
+
             // Contorno exterior.
             drawPath(
                 path = glassPath,
@@ -297,10 +489,12 @@ fun DeepSourceBottomNavigation(
                     startY = top,
                     endY = bumpBottom
                 ),
-                style = Stroke(1.4.dp.toPx())
+                style = Stroke(
+                    width = 1.4.dp.toPx()
+                )
             )
 
-            // Reflejo inferior de la burbuja.
+            // Reflejo de la onda.
             val bubbleHighlight = Path().apply {
                 moveTo(bumpEnd, bottom)
                 addSmoothBubble()
@@ -310,7 +504,8 @@ fun DeepSourceBottomNavigation(
                 drawPath(
                     path = bubbleHighlight,
                     color = GlassTeal.copy(
-                        alpha = 0.10f * bubbleVisibility.value
+                        alpha = 0.10f *
+                                bubbleVisibility.value
                     ),
                     style = Stroke(
                         width = 5.dp.toPx(),
@@ -338,10 +533,93 @@ fun DeepSourceBottomNavigation(
                 )
             }
 
-            // Reflejo superior.
+            // Liquid Glass 3.2 — estelas separadas de la onda principal.
+            // El brillo nace detras del movimiento y desaparece al asentarse.
+            // No altera la silueta del vidrio ni la navegacion.
+            if (intensity > 0.025f && halfWidth > 1f) {
+                val strength = ((intensity - 0.025f) / 0.65f)
+                    .coerceIn(0f, 1f)
+                val direction = if (flow >= 0f) 1f else -1f
+
+                for (index in 0..1) {
+                    // Distancias deliberadamente mayores que en 3.1:
+                    // las lineas no quedan ocultas bajo el contorno principal.
+                    val lag = (12f + index * 11f).dp.toPx() * strength
+                    val lift = (2.8f + index * 2.4f).dp.toPx() * strength
+                    val trailStart = bumpStart - direction * lag
+                    val trailEnd = bumpEnd - direction * lag
+                    val trailMiddle = liquidCenterX - direction * lag
+                    val trailBottom = bottom + bubbleHeight *
+                        (0.72f - index * 0.20f)
+
+                    val trailPath = Path().apply {
+                        moveTo(trailEnd, bottom - lift)
+                        cubicTo(
+                            trailEnd - (trailEnd - trailMiddle) * 0.48f,
+                            bottom - lift,
+                            trailMiddle + (trailEnd - trailMiddle) * 0.44f,
+                            trailBottom,
+                            trailMiddle,
+                            trailBottom
+                        )
+                        cubicTo(
+                            trailMiddle - (trailMiddle - trailStart) * 0.44f,
+                            trailBottom,
+                            trailStart + (trailMiddle - trailStart) * 0.48f,
+                            bottom - lift,
+                            trailStart,
+                            bottom - lift
+                        )
+                    }
+
+                    val trailBrush = Brush.horizontalGradient(
+                        colors = if (direction > 0f) listOf(
+                            Color.Transparent,
+                            GlassBlue.copy(alpha = 0.50f),
+                            GlassTeal.copy(alpha = 0.90f),
+                            Color(0xFFC7FFFF).copy(alpha = 0.65f)
+                        ) else listOf(
+                            Color(0xFFC7FFFF).copy(alpha = 0.65f),
+                            GlassTeal.copy(alpha = 0.90f),
+                            GlassBlue.copy(alpha = 0.50f),
+                            Color.Transparent
+                        ),
+                        startX = trailStart.coerceAtMost(trailEnd),
+                        endX = trailStart.coerceAtLeast(trailEnd)
+                    )
+                    // Halo suave, seguido de un filamento nitido.
+                    drawPath(
+                        path = trailPath,
+                        color = GlassTeal,
+                        alpha = strength * (if (index == 0) 0.18f else 0.11f),
+                        style = Stroke(
+                            width = (if (index == 0) 4.dp else 3.dp).toPx(),
+                            cap = StrokeCap.Round
+                        )
+                    )
+                    drawPath(
+                        path = trailPath,
+                        brush = trailBrush,
+                        alpha = strength * (if (index == 0) 0.90f else 0.66f),
+                        style = Stroke(
+                            width = (if (index == 0) 1.5.dp else 1.1.dp).toPx(),
+                            cap = StrokeCap.Round
+                        )
+                    )
+                }
+            }
+
+            // Reflejo superior original.
             val topHighlight = Path().apply {
-                moveTo(left + radius, top + 2.dp.toPx())
-                lineTo(right - radius, top + 2.dp.toPx())
+                moveTo(
+                    left + radius,
+                    top + 2.dp.toPx()
+                )
+
+                lineTo(
+                    right - radius,
+                    top + 2.dp.toPx()
+                )
             }
 
             drawPath(
@@ -362,7 +640,7 @@ fun DeepSourceBottomNavigation(
             )
         }
 
-        // Botones centrados en el cuerpo de la isla.
+        // Botones originales.
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -409,7 +687,11 @@ private fun LiquidGlassItem(
     val active = tab == activeTab
 
     val tint by animateColorAsState(
-        targetValue = if (active) GlassTeal else GlassMuted,
+        targetValue = if (active) {
+            GlassTeal
+        } else {
+            GlassMuted
+        },
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioNoBouncy,
             stiffness = Spring.StiffnessLow
@@ -421,7 +703,9 @@ private fun LiquidGlassItem(
         MutableInteractionSource()
     }
 
-    val isPressed by interactionSource.collectIsPressedAsState()
+    val isPressed by interactionSource
+        .collectIsPressedAsState()
+
     val pressScale by animateFloatAsState(
         targetValue = if (isPressed) 0.91f else 1f,
         animationSpec = spring(
@@ -486,24 +770,38 @@ private fun LiquidGlassGlyph(
                         size.width * 0.76f,
                         size.height * 0.58f
                     ),
-                    cornerRadius = CornerRadius(3.dp.toPx()),
+                    cornerRadius = CornerRadius(
+                        3.dp.toPx()
+                    ),
                     style = stroke
                 )
 
                 drawLine(
-                    tint,
-                    Offset(size.width * 0.32f, size.height * 0.40f),
-                    Offset(size.width * 0.32f, size.height * 0.65f),
-                    1.8.dp.toPx(),
-                    StrokeCap.Round
+                    color = tint,
+                    start = Offset(
+                        size.width * 0.32f,
+                        size.height * 0.40f
+                    ),
+                    end = Offset(
+                        size.width * 0.32f,
+                        size.height * 0.65f
+                    ),
+                    strokeWidth = 1.8.dp.toPx(),
+                    cap = StrokeCap.Round
                 )
 
                 drawLine(
-                    tint,
-                    Offset(size.width * 0.62f, size.height * 0.35f),
-                    Offset(size.width * 0.62f, size.height * 0.58f),
-                    1.8.dp.toPx(),
-                    StrokeCap.Round
+                    color = tint,
+                    start = Offset(
+                        size.width * 0.62f,
+                        size.height * 0.35f
+                    ),
+                    end = Offset(
+                        size.width * 0.62f,
+                        size.height * 0.58f
+                    ),
+                    strokeWidth = 1.8.dp.toPx(),
+                    cap = StrokeCap.Round
                 )
             }
 
@@ -515,19 +813,31 @@ private fun LiquidGlassGlyph(
                 )
 
                 drawLine(
-                    tint,
-                    Offset(size.width / 2, size.height * 0.29f),
-                    Offset(size.width / 2, size.height * 0.52f),
-                    1.8.dp.toPx(),
-                    StrokeCap.Round
+                    color = tint,
+                    start = Offset(
+                        size.width / 2f,
+                        size.height * 0.29f
+                    ),
+                    end = Offset(
+                        size.width / 2f,
+                        size.height * 0.52f
+                    ),
+                    strokeWidth = 1.8.dp.toPx(),
+                    cap = StrokeCap.Round
                 )
 
                 drawLine(
-                    tint,
-                    Offset(size.width / 2, size.height * 0.52f),
-                    Offset(size.width * 0.67f, size.height * 0.52f),
-                    1.8.dp.toPx(),
-                    StrokeCap.Round
+                    color = tint,
+                    start = Offset(
+                        size.width / 2f,
+                        size.height * 0.52f
+                    ),
+                    end = Offset(
+                        size.width * 0.67f,
+                        size.height * 0.52f
+                    ),
+                    strokeWidth = 1.8.dp.toPx(),
+                    cap = StrokeCap.Round
                 )
             }
 
@@ -536,7 +846,7 @@ private fun LiquidGlassGlyph(
                     color = tint,
                     radius = size.minDimension * 0.17f,
                     center = Offset(
-                        size.width / 2,
+                        size.width / 2f,
                         size.height * 0.34f
                     ),
                     style = stroke
@@ -546,7 +856,7 @@ private fun LiquidGlassGlyph(
                     color = tint,
                     radius = size.minDimension * 0.36f,
                     center = Offset(
-                        size.width / 2,
+                        size.width / 2f,
                         size.height * 0.60f
                     ),
                     style = stroke

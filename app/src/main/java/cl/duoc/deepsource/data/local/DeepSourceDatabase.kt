@@ -10,7 +10,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [ProjectEntity::class, UserEntity::class, TimeEntryEntity::class, SeedStateEntity::class],
-    version = 4,
+    version = 5,
     exportSchema = true
 )
 abstract class DeepSourceDatabase : RoomDatabase() {
@@ -46,11 +46,18 @@ abstract class DeepSourceDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'USER'")
+                db.execSQL("INSERT OR IGNORE INTO users (id, name, email, role) VALUES ('user-admin', 'Administrador Demo', 'admin@deepsource.cl', 'ADMIN')")
+            }
+        }
+
         @Volatile private var instance: DeepSourceDatabase? = null
 
         fun getInstance(context: Context): DeepSourceDatabase = instance ?: synchronized(this) {
             instance ?: Room.databaseBuilder(context.applicationContext, DeepSourceDatabase::class.java, DATABASE_NAME)
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                 .build()
                 .also { instance = it }
         }

@@ -51,6 +51,8 @@ class LoginViewModel(private val savedStateHandle: SavedStateHandle) : ViewModel
         _uiState.update { it.copy(rememberMe = value) }
     }
 
+    fun loginEmail(): String = _uiState.value.username.trim()
+
     fun validateLogin(): Boolean {
         val email = _uiState.value.username.trim()
         val password = _uiState.value.password
@@ -69,7 +71,12 @@ class LoginViewModel(private val savedStateHandle: SavedStateHandle) : ViewModel
         }
 
         // Este proyecto solo tiene las credenciales demostrativas existentes.
-        if (!email.equals("marina.soto@deepsource.cl", ignoreCase = true) || password != "deepsource") {
+        val demoCredentialsValid = when {
+            email.equals("marina.soto@deepsource.cl", ignoreCase = true) -> password == "deepsource"
+            email.equals("admin@deepsource.cl", ignoreCase = true) -> password == "deepsource-admin"
+            else -> false
+        }
+        if (!demoCredentialsValid) {
             _uiState.update {
                 it.copy(usernameError = null, passwordError = null, loginError = "Correo o contraseña incorrectos.")
             }

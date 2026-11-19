@@ -33,6 +33,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -90,7 +92,8 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
 }
 
 @Composable
-fun ProfileScreen(viewModel: WorkspaceViewModel, onProjects: () -> Unit, onRegisterTime: () -> Unit) {
+fun ProfileScreen(viewModel: WorkspaceViewModel, onProjects: () -> Unit, onRegisterTime: () -> Unit, onLogout: () -> Unit) {
+    var showLogoutConfirmation by rememberSaveable { mutableStateOf(false) }
     val context = LocalContext.current
     val activity = context.findActivity()
     val permissionStore = remember(context) { NotificationPermissionStore(context) }
@@ -150,10 +153,10 @@ fun ProfileScreen(viewModel: WorkspaceViewModel, onProjects: () -> Unit, onRegis
         Column(Modifier.fillMaxSize().statusBarsPadding()) {
             ProfileHeader()
             Column(
-                modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 132.dp),
+                modifier = Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()).padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 132.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Column(Modifier.widthIn(max = 440.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(Modifier.align(Alignment.CenterHorizontally).widthIn(max = 900.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     ProfileIdentity(currentUser)
                     ProfileOptions(
                         completed.size,
@@ -162,6 +165,7 @@ fun ProfileScreen(viewModel: WorkspaceViewModel, onProjects: () -> Unit, onRegis
                         canRequestPermission,
                         onNotificationsCheckedChange = onNotificationsCheckedChange
                     )
+                    LogoutOption(onClick = { showLogoutConfirmation = true })
                     if (state.isLoading) Text("Cargando perfil...", color = ProfileMuted, fontSize = 12.sp)
                     state.error?.let { Text(it, color = Color(0xFFE43939), fontSize = 12.sp) }
                     Text("Proyectos finalizados", color = ProfileText, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 2.dp))
@@ -169,6 +173,46 @@ fun ProfileScreen(viewModel: WorkspaceViewModel, onProjects: () -> Unit, onRegis
                 }
             }
         }
+    }
+    if (showLogoutConfirmation) {
+        AlertDialog(
+            onDismissRequest = { showLogoutConfirmation = false },
+            title = { Text("Cerrar sesión") },
+            text = { Text("¿Quieres cerrar tu sesión y volver a la pantalla de inicio de sesión?") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showLogoutConfirmation = false
+                    onLogout()
+                }) { Text("Cerrar sesión", color = ProfileTeal) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogoutConfirmation = false }) { Text("Cancelar") }
+            },
+            containerColor = Color(0xFF142338),
+            titleContentColor = ProfileText,
+            textContentColor = ProfileMuted
+        )
+    }
+}
+
+@Composable
+private fun LogoutOption(onClick: () -> Unit) {
+    val shape = RoundedCornerShape(16.dp)
+    Row(
+        modifier = Modifier.fillMaxWidth().height(52.dp)
+            .clip(shape)
+            .background(Color(0x90142035))
+            .border(1.dp, ProfileBorder, shape)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text("Cerrar sesión", color = Color(0xFFFF9E9E), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            Text("Cambiar de cuenta", color = ProfileMuted, fontSize = 10.sp)
+        }
+        ChevronGlyph()
     }
 }
 
