@@ -2,27 +2,113 @@
 
 DeepSource permite organizar proyectos y tareas y registrar las horas que el equipo dedica a cada actividad. La app conserva el detalle, las estadísticas, el temporizador del widget y las notificaciones de confirmación.
 
-## Requisitos
+## Inicio rápido (Windows / Android Studio)
 
-- JDK 17, SDK Android 35 y Android Studio. El proyecto conserva Gradle 8.9, AGP 8.7.3 y Kotlin 2.0.21.
-- Emulador Android o dispositivo desde API 24. La primera compilación requiere acceso a los repositorios de dependencias.
-- Los comandos siguientes se ejecutan en PowerShell desde la raíz. Android Studio puede crear `local.properties` con la ruta local del SDK.
+Para la presentación se utiliza la variante **debug** en el emulador. No necesita el proxy HTTPS del APK firmado, Docker ni una base de datos externa.
 
-## Iniciar los servicios
+### 1. Abrir el proyecto y verificar Java
 
-Abrir una terminal por servicio.
+Abrir PowerShell. Si el proyecto ya está descargado, entrar a su carpeta:
 
 ```powershell
-.\gradlew.bat -p backend/projects bootRun
+cd E:\DeepSource-LMJJ-ev4
+java -version
+Test-Path .\backend\projects\build.gradle.kts
+Test-Path .\backend\tasks\build.gradle.kts
 ```
 
+Java debe indicar la versión 17 y ambos `Test-Path` deben devolver `True`. Si aún no se tiene el proyecto, descargar la rama [ev4](https://github.com/Nxcho777/DeepSource-LMJJ/tree/ev4) como ZIP, extraerla y ajustar la ruta anterior, o clonar en una carpeta que no exista:
+
 ```powershell
-.\gradlew.bat -p backend/tasks bootRun
+git clone --branch ev4 https://github.com/Nxcho777/DeepSource-LMJJ.git
 ```
+
+Requisitos: JDK 17, Android SDK 35, Android Studio, emulador o dispositivo API 24 o superior e Internet para dependencias y feriados. Gradle 8.9, AGP 8.7.3 y Kotlin 2.0.21 ya están configurados; no es necesario actualizarlos.
+
+Si PowerShell utiliza otro Java, en el equipo de evaluación se puede seleccionar el JDK instalado así (ajustar la ruta en otros equipos):
+
+```powershell
+$env:JAVA_HOME = 'C:\Program Files\Eclipse Adoptium\jdk-17.0.20.101-hotspot'
+$env:Path = "$env:JAVA_HOME\bin;$env:Path"
+java -version
+```
+
+### 2. Comprobar los puertos
+
+```powershell
+Get-NetTCPConnection -LocalPort 8081,8082 -State Listen -ErrorAction SilentlyContinue | Select-Object LocalPort,OwningProcess
+```
+
+Si no aparecen procesos, continuar. Si ya hay servicios de esta misma copia funcionando, no iniciarlos de nuevo. Si son de otra versión, cerrar sus terminales con Ctrl+C o identificar primero los PID y detener únicamente los procesos correspondientes. No borrar bases de datos.
+
+### 3. Iniciar los dos microservicios
+
+Desde la raíz, ejecutar este bloque para abrir dos terminales independientes:
+
+```powershell
+Start-Process powershell.exe -ArgumentList '-NoExit','-Command','cd E:\DeepSource-LMJJ-ev4; .\gradlew.bat -p backend/projects bootRun'
+Start-Process powershell.exe -ArgumentList '-NoExit','-Command','cd E:\DeepSource-LMJJ-ev4; .\gradlew.bat -p backend/tasks bootRun'
+```
+
+Si la ruta del proyecto es distinta, reemplazarla en ambos comandos. Alternativamente, abrir dos terminales en la raíz y ejecutar `.\gradlew.bat -p backend/projects bootRun` en una y `.\gradlew.bat -p backend/tasks bootRun` en la otra.
+
+Esperar los mensajes `Started ProjectApplication` y `Started TaskApplication`. Mantener ambas ventanas abiertas durante la demostración. H2 crea sus archivos de datos automáticamente.
+
+### 4. Verificar el backend
+
+En una tercera terminal:
+
+```powershell
+curl.exe -i http://127.0.0.1:8081/api/v1/projects
+curl.exe -i http://127.0.0.1:8082/api/v1/tasks
+```
+
+Ambas respuestas deben indicar HTTP 200. Una lista `[]` es válida en una base nueva; la aplicación adopta el catálogo local al conectarse por primera vez.
+
+### 5. Ejecutar Android
+
+1. En Android Studio, seleccionar **File > Open** y abrir `E:\DeepSource-LMJJ-ev4` (o la raíz extraída).
+2. En **Settings > Build, Execution, Deployment > Build Tools > Gradle**, elegir JDK 17 (JAVA_HOME o Temurin 17) y Distribution: Wrapper.
+3. Sincronizar Gradle. Android Studio genera `local.properties` con el SDK instalado.
+4. Seleccionar la variante `debug`, el módulo `app` y un emulador encendido.
+5. Presionar **Run**. Las URL predeterminadas son `http://10.0.2.2:8081/` y `http://10.0.2.2:8082/`.
+6. Iniciar sesión y pulsar **Actualizar catálogo**.
+
+### 6. Cuentas de demostración
+
+| Rol | Correo | Contraseña demo |
+|---|---|---|
+| Usuario | `marina.soto@deepsource.cl` | `deepsource` |
+| Administrador | `admin@deepsource.cl` | `deepsource-admin` |
+
+Son cuentas locales de evaluación, no credenciales de producción. Usar el administrador para demostrar CRUD.
+
+### 7. Recorrido para la presentación
+
+1. Iniciar sesión como administrador.
+2. Crear un proyecto, mantener pulsada su tarjeta y editarlo desde el diálogo de estadísticas.
+3. En Registrar tiempo > Seleccionar tarea, crear y editar una tarea.
+4. Registrar horas y consultar las estadísticas.
+5. Abrir el calendario y comprobar el consumo de feriados de Chile. El aviso solo aparece para una fecha nacional festiva seleccionada; no alterar la fecha del dispositivo sin necesidad.
+6. Eliminar una tarea y un proyecto de demostración y comprobar que se conserva el historial.
+7. Mostrar widget, temporizador, notificaciones y perfil.
+8. Mostrar el informe de cobertura, el APK firmado en Releases y Trello.
+
+### Solución de problemas
+
+- **Incompatible Gradle JVM version:** seleccionar Java 17 en Gradle JDK; no actualizar Gradle.
+- **Sin conexión al catálogo:** verificar ambos HTTP 200, pulsar Actualizar catálogo y comprobar las URL desde Chrome del emulador (`http://10.0.2.2:8081/api/v1/projects` y `http://10.0.2.2:8082/api/v1/tasks`). Si se cambió de backend, utilizar un emulador limpio. Borrar almacenamiento solo en una instalación de demostración sin datos importantes: elimina horas, sesión y Room local.
+- **Application Installation Failed (different signature):** debug y release tienen firmas distintas. Usar un emulador separado o desinstalar la versión anterior únicamente si sus datos son prescindibles.
+- **Puerto ocupado:** no iniciar una segunda instancia; identificar el proceso antes de detenerlo.
+- **Feriados:** requieren conexión a Internet; un fallo externo no impide registrar horas.
+
+Para finalizar, detener los servicios con Ctrl+C en sus respectivas terminales. Los archivos H2 permanecen guardados.
+
+## Configuración técnica de ejecución
 
 Ambos usan Spring Boot, Spring Data JPA y H2 en modo archivo. Escuchan en loopback, en los puertos 8081 y 8082. Cada proceso abre su propio archivo H2. `DATA_DIR` permite indicar la carpeta de datos, `PORT` el puerto del proceso y `BIND_ADDRESS` la interfaz. El servicio de tareas consulta proyectos mediante `PROJECTS_URL` (por defecto, `http://127.0.0.1:8081`). El modo de evaluación es local o en una red restringida. Las credenciales de H2, si se configuran, entran mediante `DB_USER` y `DB_PASSWORD`.
 
-## Ejecutar Android
+### Variantes y dispositivos
 
 - **Emulador:** la variante debug usa `10.0.2.2:8081` y `10.0.2.2:8082`.
 - **Dispositivo USB:** ejecutar `adb reverse tcp:8081 tcp:8081` y `adb reverse tcp:8082 tcp:8082`. Compilar con `-PDS_DEBUG_PROJECTS_URL=http://127.0.0.1:8081 -PDS_DEBUG_TASKS_URL=http://127.0.0.1:8082`.
@@ -83,9 +169,14 @@ La prueba en vivo crea y archiva registros de demostración en los servicios. Ut
 
 ## Firma release y evidencias de la pauta
 
-Definir localmente `DS_RELEASE_STORE_FILE`, `DS_RELEASE_STORE_PASSWORD`, `DS_RELEASE_KEY_ALIAS` y `DS_RELEASE_KEY_PASSWORD` junto con las dos URL release. La configuración de Gradle usa esos valores para firmar `assembleRelease`. Ejecutar la firma final tras revisar las URL y el keystore de entrega. Verificar con `apksigner verify --verbose --print-certs <apk>` e instalar el APK en el dispositivo de evaluación. Guardar el keystore fuera del repositorio y entregarlo por el canal privado indicado por la asignatura.
+Definir localmente `DS_RELEASE_STORE_FILE`, `DS_RELEASE_STORE_PASSWORD`, `DS_RELEASE_KEY_ALIAS` y `DS_RELEASE_KEY_PASSWORD` junto con las dos URL release. La configuración de Gradle usa esos valores para firmar `assembleRelease`. El APK de evaluación fue generado y verificado con firma v2 el 26 de noviembre de 2026, según el resultado de la compilación y verificación de release. Está disponible en [GitHub Releases](https://github.com/Nxcho777/DeepSource-LMJJ/releases), junto con las instrucciones RELEASE.md, el proxy TLS y la evidencia de firma. El APK usa HTTPS localhost:8441 y localhost:8442 mediante un proxy local y ADB reverse; consultar RELEASE.md para ejecutarlo. Para la demostración desde Android Studio no se requiere ese proxy. Verificar con `apksigner verify --verbose --print-certs <apk>` e instalar el APK en el dispositivo de evaluación. Guardar el keystore fuera del repositorio y entregarlo por el canal privado indicado por la asignatura.
 
 Adjuntar evidencias por indicador: recorrido de pantallas (3.1.1), persistencia tras reinicio y resultados backend (3.1.2), CRUD desde Android (3.1.3), respuesta Retrofit y aviso de feriado (3.1.4), informe JaCoCo JVM (3.2.1), APK y verificación de firma (3.3.1), y enlaces al historial real de aportes del equipo en GitHub y al tablero Trello con responsables y avances (3.3.2).
+
+## Planificación y colaboración
+
+- [Tablero Trello](https://trello.com/b/Et6gt57B/deepsourceapp)
+- [Código fuente EV4](https://github.com/Nxcho777/DeepSource-LMJJ/tree/ev4)
 
 ## Integrantes
 
