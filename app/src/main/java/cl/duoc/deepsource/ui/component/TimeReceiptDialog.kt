@@ -1,5 +1,13 @@
 package cl.duoc.deepsource.ui.component
 
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_26FFFFFF
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_4D42C7B8
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_FF0C1529
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_FF2AAE9E
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_FF42C7B8
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_FFAEB9D0
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_FFF7FAFF
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.tween
@@ -40,9 +48,9 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-private val receiptText = Color(0xFFF7FAFF)
-private val receiptMuted = Color(0xFFAEB9D0)
-private val receiptTeal = Color(0xFF42C7B8)
+private val receiptText = DeepSourceColor_FFF7FAFF
+private val receiptMuted = DeepSourceColor_FFAEB9D0
+private val receiptTeal = DeepSourceColor_FF42C7B8
 
 @Composable
 fun TimeReceiptDialog(receipt: TimeReceipt, onAccept: () -> Unit) {
@@ -64,21 +72,21 @@ fun TimeReceiptDialog(receipt: TimeReceipt, onAccept: () -> Unit) {
         ) {
             Surface(
                 modifier = Modifier.fillMaxWidth().widthIn(max = 440.dp),
-                color = Color(0xFF0C1529),
+                color = DeepSourceColor_FF0C1529.copy(alpha = 0.75f),
                 contentColor = receiptText,
                 shape = RoundedCornerShape(24.dp),
-                border = BorderStroke(1.dp, Color(0x4D42C7B8)),
+                border = BorderStroke(1.dp, DeepSourceColor_4D42C7B8),
                 shadowElevation = 8.dp
             ) {
                 Column(Modifier.padding(22.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     Text("REGISTRO EXITOSO", color = receiptTeal, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     Text("¡Horas registradas!", color = receiptText, fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
-                    HorizontalDivider(color = Color(0x26FFFFFF))
+                    HorizontalDivider(color = DeepSourceColor_26FFFFFF)
                     ReceiptRow("Proyecto", receipt.projectName)
                     ReceiptRow("Tarea", receipt.taskName)
                     ReceiptRow("Fecha", dateLabel)
                     ReceiptRow("Duración", receipt.durationLabel)
-                    HorizontalDivider(color = Color(0x26FFFFFF))
+                    HorizontalDivider(color = DeepSourceColor_26FFFFFF)
                     Button(
                         onClick = {
                             if (!closing) {
@@ -89,7 +97,7 @@ fun TimeReceiptDialog(receipt: TimeReceipt, onAccept: () -> Unit) {
                         enabled = !closing,
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2AAE9E), contentColor = Color.White)
+                        colors = ButtonDefaults.buttonColors(containerColor = DeepSourceColor_FF2AAE9E, contentColor = Color.White)
                     ) { Text("Aceptar", fontWeight = FontWeight.Bold) }
                 }
             }

@@ -4,3 +4,26 @@ local.properties
 *.iml
 .idea/
 app/build/
+*.jks
+*.keystore
+*.mv.db
+*.trace.db
+deepSource-pre-ev4-*.zip
+
+# Archivos privados y generados
+**/build/
+**/.gradle/
+.kotlin/
+*.apk
+*.zip
+*.p12
+*.pfx
+*.key
+*.clixml
+*.db
+*.db-wal
+*.db-shm
+.env
+.env.*
+keystore.properties
+entrega-release/

@@ -16,7 +16,7 @@
     android:layout_width="match_parent" android:layout_height="match_parent"
     android:orientation="vertical" android:paddingLeft="11dp" android:paddingRight="11dp"
     android:paddingTop="5dp" android:paddingBottom="6dp"
-    android:background="#3D071827">
+    android:background="@color/deepsource_color_3d071827">
     <LinearLayout
         android:id="@+id/widget_header"
         android:layout_width="match_parent"
@@ -53,13 +53,13 @@
             android:paddingRight="5dp"
             android:text="•••"
             android:textSize="17sp"
-            android:textColor="#B4D1DF" />
+            android:textColor="@color/deepsource_color_b4d1df" />
     </LinearLayout>
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="1dp"
-            android:background="#28556B" />
+            android:background="@color/deepsource_color_28556b" />
         <LinearLayout
             android:id="@+id/widget_timer_panel"
             android:layout_width="match_parent"
@@ -79,7 +79,7 @@
                 android:gravity="center_vertical"
                 android:text="‹  Proyectos"
                 android:textSize="12sp"
-                android:textColor="#A8B5CC" />
+                android:textColor="@color/deepsource_color_a8b5cc" />
             <!-- Grupo centrado: proyecto, panel del reloj y estado. -->
             <LinearLayout
                 android:layout_width="match_parent"
@@ -87,18 +87,18 @@
                 android:layout_weight="1"
                 android:orientation="vertical"
                 android:gravity="center"
-                android:paddingTop="3dp"
-                android:paddingBottom="3dp">
+                android:paddingTop="0dp"
+                android:paddingBottom="0dp">
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:gravity="center"
                     android:orientation="horizontal"
-                    android:paddingBottom="8dp">
+                    android:paddingBottom="3dp">
                     <ImageView
                         android:id="@+id/widget_selected_icon"
-                        android:layout_width="44dp"
-                        android:layout_height="44dp"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
                         android:layout_marginRight="9dp"
                         android:src="@drawable/ic_icono_1"
                         android:scaleType="fitCenter"
@@ -111,7 +111,7 @@
                         android:ellipsize="end"
                         android:gravity="center_vertical"
                         android:textStyle="bold"
-                        android:textColor="#F4FAFF"
+                        android:textColor="@color/deepsource_color_f4faff"
                         android:textSize="20sp" />
                 </LinearLayout>
                 <LinearLayout
@@ -129,9 +129,9 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:gravity="center"
-                        android:textSize="32sp"
+                        android:textSize="28sp"
                         android:textStyle="bold"
-                        android:textColor="#FFFFFF" />
+                        android:textColor="@color/deepsource_color_ffffff" />
                     <TextView
                         android:id="@+id/widget_timer_status"
                         android:layout_width="wrap_content"
@@ -143,10 +143,21 @@
                         android:paddingBottom="2dp"
                         android:gravity="center"
                         android:textSize="12sp"
-                        android:textColor="#B8D4DD"
+                        android:textColor="@color/deepsource_color_b8d4dd"
                          />
                 </LinearLayout>
             </LinearLayout>
+            <TextView
+                android:id="@+id/widget_task_select"
+                android:layout_width="match_parent"
+                android:layout_height="24dp"
+                android:gravity="center"
+                android:text="Tarea: seleccionar  ›"
+                android:singleLine="true"
+                android:ellipsize="end"
+                android:textSize="11sp"
+                android:textColor="@color/deepsource_color_b8d4dd"
+                android:contentDescription="Cambiar tarea del cronómetro" />
             <TextView
                 android:id="@+id/widget_start"
                 android:layout_width="match_parent"
@@ -155,7 +166,7 @@
                 android:text="▶  Iniciar"
                 android:textStyle="bold"
                 android:textSize="14sp"
-                android:textColor="#FFFFFF"
+                android:textColor="@color/deepsource_color_ffffff"
                 android:background="@drawable/widget_timer_start" />
             <LinearLayout
                 android:id="@+id/widget_timer_actions"
@@ -171,7 +182,7 @@
                     android:gravity="center"
                     android:text="Ⅱ  Pausar"
                     android:textStyle="bold"
-                    android:textColor="#071827"
+                    android:textColor="@color/deepsource_color_071827"
                     android:textSize="12sp"
                     android:background="@drawable/widget_timer_pause" />
                 <TextView android:layout_width="7dp" android:layout_height="1dp" />
@@ -183,7 +194,7 @@
                     android:gravity="center"
                     android:text="■  Terminar"
                     android:textStyle="bold"
-                    android:textColor="#FFFFFF"
+                    android:textColor="@color/deepsource_color_ffffff"
                     android:textSize="12sp"
                     android:background="@drawable/widget_timer_finish" />
             </LinearLayout>

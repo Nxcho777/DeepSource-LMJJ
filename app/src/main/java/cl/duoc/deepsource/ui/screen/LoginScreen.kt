@@ -1,5 +1,25 @@
 package cl.duoc.deepsource.ui.screen
 
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_0DFFFFFF
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_12FFFFFF
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_17FFFFFF
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_1A42C7B8
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_1AFFFFFF
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_1FFFFFFF
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_26FFFFFF
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_33FFFFFF
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_3DFFFFFF
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_402069A8
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_4520C5B2
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_4C5233C3
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_4D42C7B8
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_FF080D1C
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_FF2AAE9E
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_FF7D8AA7
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_FFAEB9D0
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_FFF7FAFF
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_FFFF6B6B
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -56,13 +76,13 @@ import androidx.compose.ui.unit.sp
 import cl.duoc.deepsource.R
 import cl.duoc.deepsource.ui.viewmodel.LoginViewModel
 
-private val LoginSurface = Color(0xFF080D1C)
-private val LoginText = Color(0xFFF7FAFF)
-private val LoginMuted = Color(0xFFAEB9D0)
-private val LoginSubtle = Color(0xFF7D8AA7)
-private val LoginTeal = Color(0xFF2AAE9E)
-private val LoginError = Color(0xFFFF6B6B)
-private val InputBorder = Color(0x26FFFFFF)
+private val LoginSurface = DeepSourceColor_FF080D1C
+private val LoginText = DeepSourceColor_FFF7FAFF
+private val LoginMuted = DeepSourceColor_FFAEB9D0
+private val LoginSubtle = DeepSourceColor_FF7D8AA7
+private val LoginTeal = DeepSourceColor_FF2AAE9E
+private val LoginError = DeepSourceColor_FFFF6B6B
+private val InputBorder = DeepSourceColor_26FFFFFF
 
 @Composable
 fun LoginScreen(viewModel: LoginViewModel, onLogin: () -> Unit) {
@@ -105,6 +125,8 @@ fun LoginScreen(viewModel: LoginViewModel, onLogin: () -> Unit) {
                     onPasswordVisibilityChange = viewModel::togglePasswordVisibility,
                     rememberMe = state.rememberMe,
                     onRememberMeChange = viewModel::setRememberMe,
+                    onGoogleHelp = viewModel::showGoogleHelp,
+                    onPasswordHelp = viewModel::showPasswordHelp,
                     loginError = state.loginError,
                     onLogin = {
                         if (viewModel.validateLogin()) onLogin()
@@ -121,17 +143,17 @@ fun LoginScreen(viewModel: LoginViewModel, onLogin: () -> Unit) {
 private fun LoginAmbientBackground() {
     Canvas(Modifier.fillMaxSize()) {
         drawCircle(
-            brush = Brush.radialGradient(listOf(Color(0x4520C5B2), Color.Transparent), Offset(size.width * .72f, -size.height * .05f), size.width * .98f),
+            brush = Brush.radialGradient(listOf(DeepSourceColor_4520C5B2, Color.Transparent), Offset(size.width * .72f, -size.height * .05f), size.width * .98f),
             radius = size.width * .98f,
             center = Offset(size.width * .72f, -size.height * .05f)
         )
         drawCircle(
-            brush = Brush.radialGradient(listOf(Color(0x4C5233C3), Color.Transparent), Offset(-size.width * .20f, size.height * .57f), size.width),
+            brush = Brush.radialGradient(listOf(DeepSourceColor_4C5233C3, Color.Transparent), Offset(-size.width * .20f, size.height * .57f), size.width),
             radius = size.width,
             center = Offset(-size.width * .20f, size.height * .57f)
         )
         drawCircle(
-            brush = Brush.radialGradient(listOf(Color(0x402069A8), Color.Transparent), Offset(size.width * .95f, size.height * .90f), size.width * .82f),
+            brush = Brush.radialGradient(listOf(DeepSourceColor_402069A8, Color.Transparent), Offset(size.width * .95f, size.height * .90f), size.width * .82f),
             radius = size.width * .82f,
             center = Offset(size.width * .95f, size.height * .90f)
         )
@@ -159,6 +181,8 @@ private fun LoginCard(
     passwordVisible: Boolean,
     onPasswordVisibilityChange: () -> Unit,
     rememberMe: Boolean,
+    onGoogleHelp: () -> Unit,
+    onPasswordHelp: () -> Unit,
     onRememberMeChange: (Boolean) -> Unit,
     loginError: String?,
     onLogin: () -> Unit
@@ -168,14 +192,14 @@ private fun LoginCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(shape)
-            .background(Brush.verticalGradient(listOf(Color(0x1AFFFFFF), Color(0x0DFFFFFF))), shape)
-            .border(1.dp, Color(0x33FFFFFF), shape)
+            .background(Brush.verticalGradient(listOf(DeepSourceColor_1AFFFFFF, DeepSourceColor_0DFFFFFF)), shape)
+            .border(1.dp, DeepSourceColor_33FFFFFF, shape)
             .padding(horizontal = 20.dp, vertical = 24.dp),
         verticalArrangement = Arrangement.spacedBy(20.dp)
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(
-                Modifier.size(52.dp).background(Color(0x1A42C7B8), CircleShape).border(1.dp, Color(0x4D42C7B8), CircleShape),
+                Modifier.size(52.dp).background(DeepSourceColor_1A42C7B8, CircleShape).border(1.dp, DeepSourceColor_4D42C7B8, CircleShape),
                 contentAlignment = Alignment.Center
             ) { UserGlyph(27.dp) }
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -196,12 +220,12 @@ private fun LoginCard(
             )
         }
         OutlinedButton(
-            onClick = { }, // Visual only: Google authentication is not implemented yet.
+            onClick = onGoogleHelp,
             modifier = Modifier.fillMaxWidth().height(46.dp),
             shape = RoundedCornerShape(14.dp),
-            border = BorderStroke(1.dp, Color(0x33FFFFFF)),
+            border = BorderStroke(1.dp, DeepSourceColor_33FFFFFF),
             colors = ButtonDefaults.outlinedButtonColors(
-                containerColor = Color(0x12FFFFFF),
+                containerColor = DeepSourceColor_12FFFFFF,
                 contentColor = LoginText
             ),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 0.dp)
@@ -237,7 +261,7 @@ private fun LoginCard(
                 color = LoginMuted,
                 fontSize = 12.sp,
                 textDecoration = TextDecoration.Underline,
-                modifier = Modifier.clickable { }
+                modifier = Modifier.clickable(onClick = onPasswordHelp)
             )
         }
         Button(
@@ -303,8 +327,8 @@ private fun LoginField(
                 .fillMaxWidth()
                 .height(56.dp)
                 .clip(RoundedCornerShape(14.dp))
-                .background(Color(0x17FFFFFF))
-                .border(1.dp, if (errorMessage != null) LoginError else Color(0x33FFFFFF), RoundedCornerShape(14.dp)),
+                .background(DeepSourceColor_17FFFFFF)
+                .border(1.dp, if (errorMessage != null) LoginError else DeepSourceColor_33FFFFFF, RoundedCornerShape(14.dp)),
             singleLine = true,
             textStyle = TextStyle(color = LoginText, fontSize = 15.sp),
             cursorBrush = SolidColor(LoginText),
@@ -316,7 +340,7 @@ private fun LoginField(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     if (kind == LoginFieldKind.User) UserGlyph(18.dp) else LockGlyph()
-                    Box(Modifier.width(1.dp).height(20.dp).background(Color(0x3DFFFFFF)))
+                    Box(Modifier.width(1.dp).height(20.dp).background(DeepSourceColor_3DFFFFFF))
                     Box(Modifier.weight(1f)) { innerTextField() }
                     if (kind == LoginFieldKind.Password) {
                         Box(Modifier.size(18.dp).clickable { onPasswordVisibilityChange?.invoke() }, contentAlignment = Alignment.Center) {
@@ -335,7 +359,7 @@ private fun LoginField(
 @Composable
 private fun RememberCheckbox(checked: Boolean) {
     Box(
-        Modifier.size(18.dp).clip(RoundedCornerShape(4.dp)).background(Color(0x1FFFFFFF)).border(1.dp, Color(0x3DFFFFFF), RoundedCornerShape(4.dp)),
+        Modifier.size(18.dp).clip(RoundedCornerShape(4.dp)).background(DeepSourceColor_1FFFFFFF).border(1.dp, DeepSourceColor_3DFFFFFF, RoundedCornerShape(4.dp)),
         contentAlignment = Alignment.Center
     ) { if (checked) CheckGlyph() }
 }

@@ -1,5 +1,22 @@
 package cl.duoc.deepsource.ui.component
 
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_664C9CB5
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_77D6FAFF
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_886E72C8
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_B7B8F5FF
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_DC10273F
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_E00A192E
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_E02A4965
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_FF24D5D1
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_FF3688C8
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_FF42D9C5
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_FF45C5F1
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_FF49DFFF
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_FF8663DB
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_FF91A1BA
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_FFC7FFFF
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_FFD2FFFF
+
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -49,10 +66,10 @@ enum class DeepSourceTab {
     Profile
 }
 
-private val GlassTeal = Color(0xFF42D9C5)
-private val GlassMuted = Color(0xFF91A1BA)
-private val GlassBlue = Color(0xFF3688C8)
-private val GlassPurple = Color(0xFF8663DB)
+private val GlassTeal = DeepSourceColor_FF42D9C5
+private val GlassMuted = DeepSourceColor_FF91A1BA
+private val GlassBlue = DeepSourceColor_FF3688C8
+private val GlassPurple = DeepSourceColor_FF8663DB
 
 @Composable
 fun DeepSourceBottomNavigation(
@@ -411,9 +428,9 @@ fun DeepSourceBottomNavigation(
                 path = glassPath,
                 brush = Brush.verticalGradient(
                     colors = listOf(
-                        Color(0xE02A4965),
-                        Color(0xDC10273F),
-                        Color(0xE00A192E)
+                        DeepSourceColor_E02A4965,
+                        DeepSourceColor_DC10273F,
+                        DeepSourceColor_E00A192E
                     ),
                     startY = top,
                     endY = bumpBottom
@@ -438,10 +455,10 @@ fun DeepSourceBottomNavigation(
             // Opción D: halo luminoso.
             val glowBrush = Brush.horizontalGradient(
                 colors = listOf(
-                    Color(0xFF24D5D1),
-                    Color(0xFF49DFFF),
-                    Color(0xFF45C5F1),
-                    Color(0xFF24D5D1)
+                    DeepSourceColor_FF24D5D1,
+                    DeepSourceColor_FF49DFFF,
+                    DeepSourceColor_FF45C5F1,
+                    DeepSourceColor_FF24D5D1
                 ),
                 startX = left,
                 endX = right
@@ -482,9 +499,9 @@ fun DeepSourceBottomNavigation(
                 path = glassPath,
                 brush = Brush.verticalGradient(
                     colors = listOf(
-                        Color(0xB7B8F5FF),
-                        Color(0x664C9CB5),
-                        Color(0x886E72C8)
+                        DeepSourceColor_B7B8F5FF,
+                        DeepSourceColor_664C9CB5,
+                        DeepSourceColor_886E72C8
                     ),
                     startY = top,
                     endY = bumpBottom
@@ -518,7 +535,7 @@ fun DeepSourceBottomNavigation(
                     brush = Brush.horizontalGradient(
                         colors = listOf(
                             GlassBlue.copy(alpha = 0.30f),
-                            Color(0xFFD2FFFF),
+                            DeepSourceColor_FFD2FFFF,
                             GlassTeal,
                             GlassBlue.copy(alpha = 0.30f)
                         ),
@@ -577,9 +594,9 @@ fun DeepSourceBottomNavigation(
                             Color.Transparent,
                             GlassBlue.copy(alpha = 0.50f),
                             GlassTeal.copy(alpha = 0.90f),
-                            Color(0xFFC7FFFF).copy(alpha = 0.65f)
+                            DeepSourceColor_FFC7FFFF.copy(alpha = 0.65f)
                         ) else listOf(
-                            Color(0xFFC7FFFF).copy(alpha = 0.65f),
+                            DeepSourceColor_FFC7FFFF.copy(alpha = 0.65f),
                             GlassTeal.copy(alpha = 0.90f),
                             GlassBlue.copy(alpha = 0.50f),
                             Color.Transparent
@@ -627,7 +644,7 @@ fun DeepSourceBottomNavigation(
                 brush = Brush.horizontalGradient(
                     colors = listOf(
                         Color.Transparent,
-                        Color(0x77D6FAFF),
+                        DeepSourceColor_77D6FAFF,
                         Color.Transparent
                     ),
                     startX = left,

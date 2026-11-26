@@ -2,7 +2,7 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_project_row"
     android:layout_width="match_parent"
-    android:layout_height="45dp"
+    android:layout_height="48dp"
     android:background="@android:color/transparent"
     android:gravity="center_vertical"
     android:orientation="horizontal"
@@ -96,15 +96,14 @@
         android:textStyle="bold"
         android:textColor="#F4FAFF" />
 
-    <TextView
+    <ImageView
         android:id="@+id/widget_project_action"
-        android:layout_width="30dp"
-        android:layout_height="30dp"
-        android:gravity="center"
-        android:text="▶"
-        android:textSize="14sp"
-        android:textColor="#E7FAFF"
-        android:background="@drawable/widget_play_button"
-        android:contentDescription="Registrar horas en proyecto" />
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:padding="8dp"
+        android:src="@drawable/ic_widget_register_timer"
+        android:tint="#83D9E3"
+        android:contentDescription="Abrir cronómetro automático del proyecto"
+        android:clickable="true" />
 
 </LinearLayout>

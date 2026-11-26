@@ -6,5 +6,6 @@ data class TimeEntry(
     val userId: String,
     val durationMinutes: Int,
     val date: String,
-    val note: String
+    val note: String,
+    val taskId: String? = null
 )

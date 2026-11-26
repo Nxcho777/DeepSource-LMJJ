@@ -5,12 +5,12 @@
     android:viewportWidth="24"
     android:viewportHeight="24">
     <path
-        android:fillColor="#FFFFFFFF"
+        android:fillColor="@color/deepsource_color_ffffffff"
         android:fillType="evenOdd"
         android:pathData="M12,2A10,10 0,1 0,12 22A10,10 0,1 0,12 2ZM12,4A8,8 0,1 1,12 20A8,8 0,1 1,12 4Z" />
     <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FFFFFFFF"
+        android:fillColor="@color/deepsource_color_00000000"
+        android:strokeColor="@color/deepsource_color_ffffffff"
         android:strokeWidth="2"
         android:strokeLineCap="round"
         android:strokeLineJoin="round"

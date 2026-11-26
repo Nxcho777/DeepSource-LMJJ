@@ -9,7 +9,8 @@ data class Project(
     val registeredMinutes: Int,
     val totalMinutes: Int,
     val isCompleted: Boolean = false,
-    val iconIndex: Int = 0
+    val iconIndex: Int = 0,
+    val archived: Boolean = false
 ) {
     val status: ProjectStatus
         get() = if (isCompleted) ProjectStatus.Finished else ProjectStatus.fromMinutes(registeredMinutes, totalMinutes)

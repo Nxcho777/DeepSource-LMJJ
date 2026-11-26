@@ -1,5 +1,25 @@
 package cl.duoc.deepsource.ui.screen
 
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_08FFFFFF
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_12FFFFFF
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_2442C7B8
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_26FFFFFF
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_3DFFFFFF
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_4520C5B2
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_4A5438C9
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_4D42C7B8
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_6642C7B8
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_90142035
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_FF080D1C
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_FF142338
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_FF2AAE9E
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_FF42C7B8
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_FF7D8AA7
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_FFAEB9D0
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_FFE43939
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_FFF7FAFF
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_FFFF5757
+
 import android.Manifest
 import android.app.Activity
 import android.content.Context
@@ -34,12 +54,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -73,14 +95,15 @@ import cl.duoc.deepsource.ui.component.DeepSourceBottomNavigation
 import cl.duoc.deepsource.ui.component.DeepSourceTab
 import cl.duoc.deepsource.ui.viewmodel.WorkspaceViewModel
 import cl.duoc.deepsource.ui.components.DeepSourceAnimatedBackground
+import kotlinx.coroutines.launch
 
-private val ProfileSurface = Color(0xFF080D1C)
-private val ProfileText = Color(0xFFF7FAFF)
-private val ProfileMuted = Color(0xFFAEB9D0)
-private val ProfileSubtle = Color(0xFF7D8AA7)
-private val ProfileTeal = Color(0xFF42C7B8)
-private val ProfileAction = Color(0xFF2AAE9E)
-private val ProfileBorder = Color(0x26FFFFFF)
+private val ProfileSurface = DeepSourceColor_FF080D1C
+private val ProfileText = DeepSourceColor_FFF7FAFF
+private val ProfileMuted = DeepSourceColor_FFAEB9D0
+private val ProfileSubtle = DeepSourceColor_FF7D8AA7
+private val ProfileTeal = DeepSourceColor_FF42C7B8
+private val ProfileAction = DeepSourceColor_FF2AAE9E
+private val ProfileBorder = DeepSourceColor_26FFFFFF
 
 internal fun notificationSwitchChecked(preferenceEnabled: Boolean, androidAllowed: Boolean): Boolean =
     preferenceEnabled && androidAllowed
@@ -149,30 +172,80 @@ fun ProfileScreen(viewModel: WorkspaceViewModel, onProjects: () -> Unit, onRegis
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val completed = state.profileProjects
     val currentUser = state.currentUser
+    val profileScroll = rememberScrollState()
+    val scope = rememberCoroutineScope()
+    var editing by rememberSaveable { mutableStateOf(false) }
+    var privacy by rememberSaveable { mutableStateOf(false) }
+    var profileName by rememberSaveable { mutableStateOf("") }
+    var profileError by rememberSaveable { mutableStateOf<String?>(null) }
+    var savingProfile by remember { mutableStateOf(false) }
+    val openEditor = {
+        currentUser?.let {
+            profileName = it.name
+            profileError = null
+            editing = true
+        }
+        Unit
+    }
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize().statusBarsPadding()) {
             ProfileHeader()
             Column(
-                modifier = Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()).padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 132.dp),
+                modifier = Modifier.fillMaxWidth().weight(1f).verticalScroll(profileScroll).padding(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 132.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Column(Modifier.align(Alignment.CenterHorizontally).widthIn(max = 900.dp).fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    ProfileIdentity(currentUser)
+                    ProfileIdentity(currentUser, openEditor)
                     ProfileOptions(
                         completed.size,
                         notificationSwitchChecked(notificationsEnabled, androidNotificationsEnabled),
                         androidNotificationsEnabled,
                         canRequestPermission,
-                        onNotificationsCheckedChange = onNotificationsCheckedChange
+                        onNotificationsCheckedChange = onNotificationsCheckedChange,
+                        onEdit = openEditor,
+                        onPrivacy = { privacy = true },
+                        onCompleted = { scope.launch { profileScroll.animateScrollTo(profileScroll.maxValue) } }
                     )
                     LogoutOption(onClick = { showLogoutConfirmation = true })
                     if (state.isLoading) Text("Cargando perfil...", color = ProfileMuted, fontSize = 12.sp)
-                    state.error?.let { Text(it, color = Color(0xFFE43939), fontSize = 12.sp) }
+                    state.error?.let { Text(it, color = DeepSourceColor_FFE43939, fontSize = 12.sp) }
                     Text("Proyectos finalizados", color = ProfileText, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 2.dp))
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) { completed.forEach { CompletedProjectCard(it) } }
                 }
             }
         }
+    }
+    if (editing && currentUser != null) {
+        AlertDialog(
+            onDismissRequest = { if (!savingProfile) editing = false },
+            title = { Text("Editar perfil") },
+            text = {
+                Column {
+                    OutlinedTextField(profileName, { profileName = it.take(100); profileError = null },
+                        label = { Text("Nombre") }, singleLine = true, enabled = !savingProfile)
+                    profileError?.let { Text(it, color = DeepSourceColor_FFE43939, fontSize = 12.sp) }
+                }
+            },
+            confirmButton = {
+                TextButton(enabled = profileName.isNotBlank() && !savingProfile, onClick = {
+                    savingProfile = true
+                    viewModel.saveProfileName(profileName) { error ->
+                        savingProfile = false
+                        profileError = error
+                        if (error == null) editing = false
+                    }
+                }) { Text("Guardar nombre") }
+            },
+            dismissButton = { TextButton(enabled = !savingProfile, onClick = { editing = false }) { Text("Cancelar") } }
+        )
+    }
+    if (privacy) {
+        AlertDialog(
+            onDismissRequest = { privacy = false },
+            title = { Text("Privacidad") },
+            text = { Text("Tu cuenta y las horas registradas se guardan en este dispositivo. Los servicios guardan el catálogo de proyectos y tareas.") },
+            confirmButton = { TextButton(onClick = { privacy = false }) { Text("Cerrar") } }
+        )
     }
     if (showLogoutConfirmation) {
         AlertDialog(
@@ -188,7 +261,7 @@ fun ProfileScreen(viewModel: WorkspaceViewModel, onProjects: () -> Unit, onRegis
             dismissButton = {
                 TextButton(onClick = { showLogoutConfirmation = false }) { Text("Cancelar") }
             },
-            containerColor = Color(0xFF142338),
+            containerColor = DeepSourceColor_FF142338.copy(alpha = 0.75f),
             titleContentColor = ProfileText,
             textContentColor = ProfileMuted
         )
@@ -198,21 +271,23 @@ fun ProfileScreen(viewModel: WorkspaceViewModel, onProjects: () -> Unit, onRegis
 @Composable
 private fun LogoutOption(onClick: () -> Unit) {
     val shape = RoundedCornerShape(16.dp)
-    Row(
-        modifier = Modifier.fillMaxWidth().height(52.dp)
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(52.dp)
             .clip(shape)
-            .background(Color(0x90142035))
+            .background(DeepSourceColor_90142035)
             .border(1.dp, ProfileBorder, shape)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-            Text("Cerrar sesión", color = Color(0xFFFF9E9E), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-            Text("Cambiar de cuenta", color = ProfileMuted, fontSize = 10.sp)
-        }
-        ChevronGlyph()
+        Text(
+            text = "Cerrar sesión",
+            color = DeepSourceColor_FFFF5757,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.SemiBold,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+        )
     }
 }
 
@@ -220,12 +295,12 @@ private fun LogoutOption(onClick: () -> Unit) {
 private fun ProfileAmbientBackground() {
     Canvas(Modifier.fillMaxSize()) {
         drawCircle(
-            brush = Brush.radialGradient(listOf(Color(0x4520C5B2), Color.Transparent), Offset(size.width * 1.02f, -size.height * .06f), size.width * .88f),
+            brush = Brush.radialGradient(listOf(DeepSourceColor_4520C5B2, Color.Transparent), Offset(size.width * 1.02f, -size.height * .06f), size.width * .88f),
             radius = size.width * .88f,
             center = Offset(size.width * 1.02f, -size.height * .06f)
         )
         drawCircle(
-            brush = Brush.radialGradient(listOf(Color(0x4A5438C9), Color.Transparent), Offset(-size.width * .25f, size.height * .55f), size.width),
+            brush = Brush.radialGradient(listOf(DeepSourceColor_4A5438C9, Color.Transparent), Offset(-size.width * .25f, size.height * .55f), size.width),
             radius = size.width,
             center = Offset(-size.width * .25f, size.height * .55f)
         )
@@ -235,7 +310,7 @@ private fun ProfileAmbientBackground() {
 @Composable
 private fun ProfileHeader() {
     Row(
-        Modifier.fillMaxWidth().height(64.dp).background(Color(0x08FFFFFF)).border(1.dp, Color.Transparent).padding(horizontal = 16.dp),
+        Modifier.fillMaxWidth().height(64.dp).background(DeepSourceColor_08FFFFFF).border(1.dp, Color.Transparent).padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -250,22 +325,25 @@ private fun ProfileHeader() {
 }
 
 @Composable
-private fun ProfileIdentity(user: User?) {
+private fun ProfileIdentity(user: User?, onEdit: () -> Unit) {
     val shape = RoundedCornerShape(20.dp)
     Row(
-        modifier = Modifier.fillMaxWidth().height(90.dp).clip(shape).background(Color(0x90142035)).border(1.dp, Color(0x3DFFFFFF), shape).padding(14.dp),
+        modifier = Modifier.fillMaxWidth().height(90.dp).clip(shape).background(DeepSourceColor_90142035).border(1.dp, DeepSourceColor_3DFFFFFF, shape).padding(14.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(Modifier.size(54.dp).background(Color(0x2442C7B8), CircleShape).border(1.dp, Color(0x6642C7B8), CircleShape), contentAlignment = Alignment.Center) {
-            Text("MS", color = ProfileTeal, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+        Box(Modifier.size(54.dp).background(DeepSourceColor_2442C7B8, CircleShape).border(1.dp, DeepSourceColor_6642C7B8, CircleShape), contentAlignment = Alignment.Center) {
+            val initials = user?.name?.split(" ")?.filter { it.isNotBlank() }?.take(2)
+                ?.joinToString("") { it.first().uppercase() }.orEmpty()
+            Text(initials, color = ProfileTeal, fontSize = 17.sp, fontWeight = FontWeight.Bold)
         }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(user?.name.orEmpty(), color = ProfileText, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
             Text(user?.email.orEmpty(), color = ProfileMuted, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Button(
-            onClick = {},
+            onClick = onEdit,
+            enabled = user != null,
             modifier = Modifier.height(32.dp),
             shape = RoundedCornerShape(14.dp),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 11.dp),
@@ -280,13 +358,16 @@ private fun ProfileOptions(
     notificationsChecked: Boolean,
     androidNotificationsEnabled: Boolean,
     canRequestPermission: Boolean,
-    onNotificationsCheckedChange: (Boolean) -> Unit
+    onNotificationsCheckedChange: (Boolean) -> Unit,
+    onEdit: () -> Unit,
+    onPrivacy: () -> Unit,
+    onCompleted: () -> Unit
 ) {
     val shape = RoundedCornerShape(20.dp)
-    Column(Modifier.fillMaxWidth().clip(shape).background(Color(0x90142035)).border(1.dp, ProfileBorder, shape)) {
-        ProfileOption("Editar perfil", "Modifica tus datos personales", OptionIcon.User, OptionEnd.Chevron)
+    Column(Modifier.fillMaxWidth().clip(shape).background(DeepSourceColor_90142035).border(1.dp, ProfileBorder, shape)) {
+        ProfileOption("Editar perfil", "Modifica tu nombre en este dispositivo", OptionIcon.User, OptionEnd.Chevron, onClick = onEdit)
         OptionDivider()
-        ProfileOption("Privacidad", "Configura la privacidad de tu cuenta", OptionIcon.Lock, OptionEnd.Chevron)
+        ProfileOption("Privacidad", "Consulta dónde se guardan tus datos", OptionIcon.Lock, OptionEnd.Chevron, onClick = onPrivacy)
         OptionDivider()
         ProfileOption(
             "Notificaciones",
@@ -302,12 +383,12 @@ private fun ProfileOptions(
             onCheckedChange = onNotificationsCheckedChange
         )
         OptionDivider()
-        ProfileOption("Proyectos finalizados", "Consulta tus proyectos completados", OptionIcon.Folder, OptionEnd.Badge(count))
+        ProfileOption("Proyectos finalizados", "Consulta tus proyectos completados", OptionIcon.Folder, OptionEnd.Badge(count), onClick = onCompleted)
     }
 }
 
 @Composable
-private fun OptionDivider() = Box(Modifier.fillMaxWidth().height(1.dp).background(Color(0x12FFFFFF)))
+private fun OptionDivider() = Box(Modifier.fillMaxWidth().height(1.dp).background(DeepSourceColor_12FFFFFF))
 
 private enum class OptionIcon { User, Lock, Bell, Folder }
 private sealed interface OptionEnd { data object Chevron : OptionEnd; data object Toggle : OptionEnd; data class Badge(val count: Int) : OptionEnd }
@@ -327,7 +408,7 @@ private fun ProfileOption(
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(Modifier.size(34.dp).background(Color(0x2442C7B8), RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) { OptionGlyph(icon) }
+        Box(Modifier.size(34.dp).background(DeepSourceColor_2442C7B8, RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) { OptionGlyph(icon) }
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Text(title, color = ProfileText, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
             Text(subtitle, color = ProfileMuted, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -335,7 +416,7 @@ private fun ProfileOption(
         when (end) {
             OptionEnd.Chevron -> ChevronGlyph()
             OptionEnd.Toggle -> ToggleVisual(toggleChecked, onCheckedChange)
-            is OptionEnd.Badge -> Box(Modifier.height(24.dp).clip(CircleShape).background(Color(0x2442C7B8)).border(1.dp, Color(0x4D42C7B8), CircleShape).padding(horizontal = 8.dp), contentAlignment = Alignment.Center) {
+            is OptionEnd.Badge -> Box(Modifier.height(24.dp).clip(CircleShape).background(DeepSourceColor_2442C7B8).border(1.dp, DeepSourceColor_4D42C7B8, CircleShape).padding(horizontal = 8.dp), contentAlignment = Alignment.Center) {
                 Text(end.count.toString(), color = ProfileTeal, fontSize = 11.sp, fontWeight = FontWeight.Bold)
             }
         }
@@ -346,7 +427,7 @@ private fun ProfileOption(
 private fun CompletedProjectCard(project: Project) {
     val shape = RoundedCornerShape(16.dp)
     Row(
-        Modifier.fillMaxWidth().height(56.dp).clip(shape).background(Color(0x90142035)).border(1.dp, ProfileBorder, shape).padding(horizontal = 12.dp),
+        Modifier.fillMaxWidth().height(56.dp).clip(shape).background(DeepSourceColor_90142035).border(1.dp, ProfileBorder, shape).padding(horizontal = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

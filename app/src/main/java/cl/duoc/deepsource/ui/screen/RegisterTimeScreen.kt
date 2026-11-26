@@ -1,5 +1,26 @@
 package cl.duoc.deepsource.ui.screen
 
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_08FFFFFF
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_12FFFFFF
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_1939BFAF
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_1F42C7B8
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_26FFFFFF
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_3039BFAF
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_462E73E6
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_4A4F33C4
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_4D42C7B8
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_90142035
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_FF080D1C
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_FF0C1529
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_FF2AAE9E
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_FF365B61
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_FF42C7B8
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_FF7D8AA7
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_FFAEB9D0
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_FFE43939
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_FFF7FAFF
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_FFFF6B6B
+
 import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -71,9 +92,12 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import cl.duoc.deepsource.ui.component.ProjectIcons
 import cl.duoc.deepsource.R
 import cl.duoc.deepsource.domain.model.Project
 import cl.duoc.deepsource.notification.NotificationPermissionStore
+import cl.duoc.deepsource.domain.model.ProjectTask
+import cl.duoc.deepsource.domain.model.RegistrationDates
 import cl.duoc.deepsource.ui.component.DeepSourceBottomNavigation
 import cl.duoc.deepsource.ui.component.DeepSourceTab
 import cl.duoc.deepsource.ui.component.TimeReceiptDialog
@@ -91,14 +115,14 @@ import kotlin.math.abs
 import androidx.compose.ui.window.DialogProperties
 import cl.duoc.deepsource.ui.components.DeepSourceAnimatedBackground
 
-private val RegisterSurface = Color(0xFF080D1C)
-private val RegisterText = Color(0xFFF7FAFF)
-private val RegisterMuted = Color(0xFFAEB9D0)
-private val RegisterSubtle = Color(0xFF7D8AA7)
-private val RegisterTeal = Color(0xFF42C7B8)
-private val RegisterAction = Color(0xFF2AAE9E)
-private val RegisterBorder = Color(0x26FFFFFF)
-private val RegisterError = Color(0xFFFF6B6B)
+private val RegisterSurface = DeepSourceColor_FF080D1C
+private val RegisterText = DeepSourceColor_FFF7FAFF
+private val RegisterMuted = DeepSourceColor_FFAEB9D0
+private val RegisterSubtle = DeepSourceColor_FF7D8AA7
+private val RegisterTeal = DeepSourceColor_FF42C7B8
+private val RegisterAction = DeepSourceColor_FF2AAE9E
+private val RegisterBorder = DeepSourceColor_26FFFFFF
+private val RegisterError = DeepSourceColor_FFFF6B6B
 
 private enum class DurationPickerStep { Hours, Minutes }
 
@@ -111,9 +135,26 @@ fun RegisterTimeScreen(viewModel: WorkspaceViewModel, onProjects: () -> Unit, on
     val notificationPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
     val workspace by viewModel.uiState.collectAsStateWithLifecycle()
     val form by viewModel.registerState.collectAsStateWithLifecycle()
+    val taskState by viewModel.taskState.collectAsStateWithLifecycle()
+    val catalogError by viewModel.catalogError.collectAsStateWithLifecycle()
+    val holidays by viewModel.holidayDates.collectAsStateWithLifecycle()
     val date = LocalDate.parse(form.date)
     var datePickerOpen by rememberSaveable { mutableStateOf(false) }
     var projectPickerOpen by rememberSaveable { mutableStateOf(false) }
+    var taskPickerOpen by rememberSaveable { mutableStateOf(false) }
+    var createTaskOpen by rememberSaveable { mutableStateOf(false) }
+    var taskToEdit by remember { mutableStateOf<ProjectTask?>(null) }
+    var taskToDelete by remember { mutableStateOf<ProjectTask?>(null) }
+    var newTaskName by rememberSaveable { mutableStateOf("") }
+    var newTaskDescription by rememberSaveable { mutableStateOf("") }
+    var newTaskHours by rememberSaveable { mutableStateOf("1") }
+    LaunchedEffect(taskState.createdProjectId) {
+        if (taskState.createdProjectId != null) {
+            createTaskOpen = false
+            taskToEdit = null
+            viewModel.resetTaskState()
+        }
+    }
     var durationPickerOpen by rememberSaveable { mutableStateOf(false) }
     var durationPickerStep by rememberSaveable { mutableStateOf(DurationPickerStep.Hours) }
     var pendingHours by rememberSaveable { mutableStateOf(0) }
@@ -128,6 +169,164 @@ fun RegisterTimeScreen(viewModel: WorkspaceViewModel, onProjects: () -> Unit, on
         pendingMinutes = (form.minutes.toIntOrNull() ?: 0).coerceIn(0, 59)
         durationPickerStep = DurationPickerStep.Hours
         durationPickerOpen = true
+    }
+
+    // Ventanas de tareas: superficies oscuras y tipografía de alto contraste.
+    val taskDialogShape = RoundedCornerShape(22.dp)
+    val taskFieldColors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(
+        focusedTextColor = RegisterText,
+        unfocusedTextColor = RegisterText,
+        focusedLabelColor = RegisterTeal,
+        unfocusedLabelColor = RegisterMuted,
+        focusedBorderColor = RegisterTeal,
+        unfocusedBorderColor = RegisterBorder,
+        cursorColor = RegisterTeal,
+        focusedContainerColor = DeepSourceColor_90142035,
+        unfocusedContainerColor = DeepSourceColor_90142035
+    )
+    if (taskPickerOpen && project != null) {
+        androidx.compose.ui.window.Dialog(onDismissRequest = { taskPickerOpen = false }) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(taskDialogShape)
+                    .background(RegisterSurface.copy(alpha = 0.52f))
+                    .border(1.dp, RegisterBorder, taskDialogShape)
+                    .padding(18.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text("Tareas de ${project.name}", color = RegisterText, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                Text("Selecciona una actividad para registrar tu tiempo.", color = RegisterMuted, fontSize = 12.sp)
+                Column(
+                    modifier = Modifier.heightIn(max = 320.dp).verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    workspace.tasks.filter { it.projectId == project.id && !it.archived }.forEach { task ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(DeepSourceColor_90142035.copy(alpha = 0.70f))
+                                .border(1.dp, RegisterBorder, RoundedCornerShape(14.dp))
+                                .clickable { viewModel.selectTask(task); taskPickerOpen = false }
+                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                                Text(task.name, color = RegisterText, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                                if (task.description.isNotBlank()) {
+                                    Text(task.description, color = RegisterMuted, fontSize = 11.sp, maxLines = 2)
+                                }
+                            }
+                            Text("${task.estimatedMinutes / 60} h", color = RegisterMuted, fontSize = 12.sp)
+                        }
+                        if (workspace.isAdmin) {
+                            Row {
+                                TextButton(onClick = {
+                                    viewModel.resetTaskState()
+                                    taskToEdit = task
+                                    newTaskName = task.name
+                                    newTaskDescription = task.description
+                                    newTaskHours = (task.estimatedMinutes / 60).toString()
+                                    taskPickerOpen = false
+                                    createTaskOpen = true
+                                }) { Text("Editar", color = RegisterTeal) }
+                                TextButton(onClick = {
+                                    taskPickerOpen = false
+                                    taskToDelete = task
+                                }) { Text("Eliminar", color = DeepSourceColor_FFE43939) }
+                            }
+                        }
+                    }
+                }
+                androidx.compose.material3.HorizontalDivider(color = RegisterBorder)
+                if (workspace.isAdmin) TextButton(
+                    onClick = {
+                        viewModel.resetTaskState()
+                        taskToEdit = null
+                        newTaskName = ""
+                        newTaskDescription = ""
+                        newTaskHours = "1"
+                        taskPickerOpen = false
+                        createTaskOpen = true
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("+ Crear nueva tarea", color = RegisterTeal, fontWeight = FontWeight.SemiBold)
+                }
+            }
+        }
+    }
+    if (workspace.isAdmin) taskToDelete?.let { task ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { taskToDelete = null },
+            title = { Text("Eliminar tarea") },
+            text = { Text("¿Eliminar \"${task.name}\" del catálogo? Sus horas se conservan.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    taskToDelete = null
+                    viewModel.deleteTask(task)
+                }) { Text("Eliminar") }
+            },
+            dismissButton = { TextButton(onClick = { taskToDelete = null }) { Text("Cancelar") } }
+        )
+    }
+    if (createTaskOpen && workspace.isAdmin) {
+        androidx.compose.ui.window.Dialog(onDismissRequest = { if (!taskState.isSaving) createTaskOpen = false }) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(taskDialogShape)
+                    .background(RegisterSurface.copy(alpha = 0.52f))
+                    .border(1.dp, RegisterBorder, taskDialogShape)
+                    .padding(18.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(if (taskToEdit == null) "Nueva tarea" else "Editar tarea", color = RegisterText, fontSize = 19.sp, fontWeight = FontWeight.SemiBold)
+                Text("Organiza el trabajo dentro de tu proyecto.", color = RegisterMuted, fontSize = 12.sp)
+                androidx.compose.material3.OutlinedTextField(
+                    value = newTaskName, onValueChange = { newTaskName = it },
+                    label = { Text("Nombre de la tarea") }, singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp), colors = taskFieldColors
+                )
+                androidx.compose.material3.OutlinedTextField(
+                    value = newTaskDescription, onValueChange = { newTaskDescription = it },
+                    label = { Text("Descripción") },
+                    modifier = Modifier.fillMaxWidth(), maxLines = 3,
+                    shape = RoundedCornerShape(14.dp), colors = taskFieldColors
+                )
+                androidx.compose.material3.OutlinedTextField(
+                    value = newTaskHours, onValueChange = { newTaskHours = it.filter(Char::isDigit) },
+                    label = { Text("Horas estimadas") }, singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Number),
+                    shape = RoundedCornerShape(14.dp), colors = taskFieldColors
+                )
+                taskState.error?.let { Text(it, color = DeepSourceColor_FFE43939, fontSize = 12.sp) }
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                    TextButton(onClick = { createTaskOpen = false }, enabled = !taskState.isSaving, modifier = Modifier.weight(1f)) {
+                        Text("Cancelar", color = RegisterMuted)
+                    }
+                    Button(
+                        onClick = {
+                            viewModel.createTask(newTaskName, newTaskDescription, newTaskHours.toIntOrNull() ?: 0, taskToEdit)
+                        },
+                        enabled = !taskState.isSaving && newTaskName.isNotBlank() && (newTaskHours.toIntOrNull() ?: 0) in 1..100000,
+                        modifier = Modifier.weight(1.4f).height(46.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = RegisterAction)
+                    ) {
+                        Text(
+                            if (taskState.isSaving) "Guardando..." else if (taskToEdit == null) "Crear tarea" else "Guardar cambios",
+                            color = RegisterText, fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+            }
+        }
     }
 
     Box(Modifier.fillMaxSize()) {
@@ -170,13 +369,42 @@ fun RegisterTimeScreen(viewModel: WorkspaceViewModel, onProjects: () -> Unit, on
                         }
                     }
                     DurationSummary(form.hours, form.minutes)
+                    Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                        Text("Tarea del proyecto", color = RegisterMuted, fontSize = 12.sp)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(18.dp))
+                                .background(DeepSourceColor_90142035)
+                                .border(1.dp, RegisterBorder, RoundedCornerShape(18.dp))
+                                .clickable { taskPickerOpen = true }
+                                .heightIn(min = 54.dp)
+                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Text(
+                                text = if (form.selectedTaskId == null) "Seleccionar tarea" else form.task,
+                                color = if (form.selectedTaskId == null) RegisterMuted else RegisterText,
+                                fontSize = 15.sp,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Text("⌄", color = RegisterTeal, fontSize = 24.sp)
+                        }
+                    }
+                    if (form.selectedTaskId != null) {
+                        val chosen = workspace.tasks.firstOrNull { it.id == form.selectedTaskId }
+                        if (chosen != null) {
+                            val used = workspace.timeEntries.filter { it.taskId == chosen.id }.sumOf { it.durationMinutes }
+                            Text("Avance: ${used / 60} h de ${chosen.estimatedMinutes / 60} h estimadas",
+                                color = RegisterMuted, fontSize = 12.sp)
+                        }
+                    }
                     RegisterTextField(
-                        "Nombre de la tarea", form.task, viewModel::setTask,
-                        Modifier.fillMaxWidth(), KeyboardType.Text, FieldIcon.Task,
-                        onTouched = viewModel::markTaskTouched,
-                        errorMessage = form.taskError
+                        "Descripción del registro", form.description, viewModel::setDescription,
+                        Modifier.fillMaxWidth(), KeyboardType.Text
                     )
-                    (form.message ?: workspace.error)?.let { Text(it, color = if (form.isError || workspace.error != null) Color(0xFFE43939) else RegisterTeal, fontSize = 12.sp, fontWeight = FontWeight.SemiBold) }
+                    (form.message ?: workspace.error ?: catalogError)?.let { Text(it, color = if (form.isError || workspace.error != null || catalogError != null) DeepSourceColor_FFE43939 else RegisterTeal, fontSize = 12.sp, fontWeight = FontWeight.SemiBold) }
                     Button(
                         onClick = viewModel::saveTimeEntry,
                         enabled = form.isValid && !form.isSaving && form.receipt == null && !workspace.isLoading && project != null && user != null,
@@ -185,8 +413,8 @@ fun RegisterTimeScreen(viewModel: WorkspaceViewModel, onProjects: () -> Unit, on
                         colors = ButtonDefaults.buttonColors(
                             containerColor = RegisterAction,
                             contentColor = Color.White,
-                            disabledContainerColor = Color(0xFF365B61),
-                            disabledContentColor = Color(0xFFAEB9D0)
+                            disabledContainerColor = DeepSourceColor_FF365B61,
+                            disabledContentColor = DeepSourceColor_FFAEB9D0
                         )
                     ) {
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -199,15 +427,14 @@ fun RegisterTimeScreen(viewModel: WorkspaceViewModel, onProjects: () -> Unit, on
         }
         // Calendario DeepSource: reemplaza el selector nativo de Android.
         if (datePickerOpen) {
-            val today = LocalDate.now()
-            val previousWeekMonday = today
-                .with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
-                .minusWeeks(1)
-            val selectedDateForPicker = if (
-                !date.isBefore(previousWeekMonday) &&
-                !date.isAfter(today) &&
-                date.dayOfWeek !in listOf(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY)
-            ) date else today
+            val datePolicy = RegistrationDates()
+            val today = datePolicy.today
+            val previousWeekMonday = datePolicy.earliest
+            LaunchedEffect(previousWeekMonday.year, today.year) {
+                viewModel.loadHolidays(previousWeekMonday.year..today.year)
+            }
+            val selectedDateForPicker = if (datePolicy.allows(date)) date else generateSequence(today) { it.minusDays(1) }
+                .first(datePolicy::allows)
 
             val datePickerState = rememberDatePickerState(
                 initialSelectedDateMillis = selectedDateForPicker
@@ -220,10 +447,7 @@ fun RegisterTimeScreen(viewModel: WorkspaceViewModel, onProjects: () -> Unit, on
                         val selected = Instant.ofEpochMilli(utcTimeMillis)
                             .atZone(ZoneOffset.UTC)
                             .toLocalDate()
-                        return !selected.isBefore(previousWeekMonday) &&
-                                !selected.isAfter(today) &&
-                                selected.dayOfWeek != DayOfWeek.SATURDAY &&
-                                selected.dayOfWeek != DayOfWeek.SUNDAY
+                        return datePolicy.allows(selected)
                     }
 
                     override fun isSelectableYear(year: Int): Boolean {
@@ -245,7 +469,7 @@ fun RegisterTimeScreen(viewModel: WorkspaceViewModel, onProjects: () -> Unit, on
                         .fillMaxWidth()
                         .padding(horizontal = 8.dp)
                         .clip(RoundedCornerShape(24.dp))
-                        .background(Color(0xFF0C1529))
+                        .background(DeepSourceColor_FF0C1529)
                         .border(
                             1.dp,
                             RegisterBorder,
@@ -267,7 +491,7 @@ fun RegisterTimeScreen(viewModel: WorkspaceViewModel, onProjects: () -> Unit, on
                             )
                         },
                         colors = DatePickerDefaults.colors(
-                            containerColor = Color(0xFF0C1529),
+                            containerColor = DeepSourceColor_FF0C1529,
                             titleContentColor = RegisterTeal,
                             headlineContentColor = RegisterText,
                             weekdayContentColor = RegisterMuted,
@@ -284,6 +508,13 @@ fun RegisterTimeScreen(viewModel: WorkspaceViewModel, onProjects: () -> Unit, on
                             todayDateBorderColor = RegisterTeal
                         )
                     )
+                    val selectedHoliday = datePickerState.selectedDateMillis?.let { millis ->
+                        holidays[Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate()]
+                    }
+                    selectedHoliday?.let {
+                        Text("Feriado nacional: $it", color = RegisterTeal, fontSize = 12.sp,
+                            modifier = Modifier.padding(horizontal = 24.dp))
+                    }
                     Row(
                         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                         horizontalArrangement = Arrangement.End,
@@ -321,7 +552,7 @@ fun RegisterTimeScreen(viewModel: WorkspaceViewModel, onProjects: () -> Unit, on
                 Column(
                     modifier = Modifier.fillMaxWidth()
                         .clip(RoundedCornerShape(24.dp))
-                        .background(Color(0xFF0C1529))
+                        .background(DeepSourceColor_FF0C1529)
                         .border(1.dp, RegisterBorder, RoundedCornerShape(24.dp))
                         .padding(20.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -329,12 +560,12 @@ fun RegisterTimeScreen(viewModel: WorkspaceViewModel, onProjects: () -> Unit, on
                     Text("Cambiar proyecto", color = RegisterText, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                     Text("Selecciona el proyecto para este registro.", color = RegisterMuted, fontSize = 13.sp)
                     Column(Modifier.heightIn(max = 380.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        workspace.projects.forEachIndexed { index, option ->
+                        workspace.projects.filterNot { it.archived }.forEachIndexed { index, option ->
                             val iconRes = projectIconForIndex(option.iconIndex)
                             Row(
                                 modifier = Modifier.fillMaxWidth()
                                     .clip(RoundedCornerShape(14.dp))
-                                    .background(if (option.id == project?.id) Color(0x3039BFAF) else Color(0x12FFFFFF))
+                                    .background(if (option.id == project?.id) DeepSourceColor_3039BFAF else DeepSourceColor_12FFFFFF)
                                     .border(1.dp, if (option.id == project?.id) RegisterTeal else RegisterBorder, RoundedCornerShape(14.dp))
                                     .clickable {
                                         viewModel.selectProject(option.id)
@@ -378,7 +609,7 @@ fun RegisterTimeScreen(viewModel: WorkspaceViewModel, onProjects: () -> Unit, on
                         Modifier
                             .fillMaxWidth()
                             .clip(dialogShape)
-                            .background(Color(0xFF0C1529), dialogShape)
+                            .background(DeepSourceColor_FF0C1529, dialogShape)
                             .border(1.dp, RegisterBorder, dialogShape)
                     ) {
                         DurationPickerDialog(
@@ -414,12 +645,12 @@ fun RegisterTimeScreen(viewModel: WorkspaceViewModel, onProjects: () -> Unit, on
 private fun RegisterAmbientBackground() {
     Canvas(Modifier.fillMaxSize()) {
         drawCircle(
-            brush = Brush.radialGradient(listOf(Color(0x462E73E6), Color.Transparent), Offset(size.width * 1.05f, -size.height * .05f), size.width * .90f),
+            brush = Brush.radialGradient(listOf(DeepSourceColor_462E73E6, Color.Transparent), Offset(size.width * 1.05f, -size.height * .05f), size.width * .90f),
             radius = size.width * .90f,
             center = Offset(size.width * 1.05f, -size.height * .05f)
         )
         drawCircle(
-            brush = Brush.radialGradient(listOf(Color(0x4A4F33C4), Color.Transparent), Offset(-size.width * .22f, size.height * .56f), size.width),
+            brush = Brush.radialGradient(listOf(DeepSourceColor_4A4F33C4, Color.Transparent), Offset(-size.width * .22f, size.height * .56f), size.width),
             radius = size.width,
             center = Offset(-size.width * .22f, size.height * .56f)
         )
@@ -437,7 +668,7 @@ private fun RegisterHeader() {
     }
     val clockFormat = remember { DateTimeFormatter.ofPattern("HH:mm:ss") }
     Row(
-        modifier = Modifier.fillMaxWidth().height(72.dp).background(Color(0x08FFFFFF)).border(1.dp, Color.Transparent).padding(horizontal = 20.dp),
+        modifier = Modifier.fillMaxWidth().height(72.dp).background(DeepSourceColor_08FFFFFF).border(1.dp, Color.Transparent).padding(horizontal = 20.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -448,7 +679,7 @@ private fun RegisterHeader() {
             contentScale = ContentScale.Fit
         )
         Row(
-            Modifier.height(34.dp).clip(CircleShape).background(Color(0x1F42C7B8)).border(1.dp, Color(0x4D42C7B8), CircleShape).padding(horizontal = 12.dp),
+            Modifier.height(34.dp).clip(CircleShape).background(DeepSourceColor_1F42C7B8).border(1.dp, DeepSourceColor_4D42C7B8, CircleShape).padding(horizontal = 12.dp),
             horizontalArrangement = Arrangement.spacedBy(7.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -459,13 +690,7 @@ private fun RegisterHeader() {
 }
 
 @Composable
-private fun projectIconForIndex(projectIndex: Int): Int = when (projectIndex) {
-    0 -> R.drawable.ic_icono_1
-    1 -> R.drawable.ic_icono_2
-    2 -> R.drawable.ic_icono_3
-    3 -> R.drawable.ic_icono_4
-    else -> R.drawable.ic_icono_1
-}
+private fun projectIconForIndex(projectIndex: Int): Int = ProjectIcons.resource(projectIndex)
 
 @Composable
 private fun SelectedProjectCard(project: Project, projectIndex: Int, onClick: () -> Unit) {
@@ -475,7 +700,7 @@ private fun SelectedProjectCard(project: Project, projectIndex: Int, onClick: ()
         Row(
             modifier = Modifier.fillMaxWidth()
                 .clip(RoundedCornerShape(18.dp))
-                .background(Color(0x90142035))
+                .background(DeepSourceColor_90142035)
                 .border(1.dp, RegisterBorder, RoundedCornerShape(18.dp))
                 .clickable(onClick = onClick)
                 .padding(14.dp),
@@ -503,7 +728,7 @@ private fun DateField(date: LocalDate, onClick: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
         Text("Fecha", color = RegisterMuted, fontSize = 12.sp)
         Row(
-            modifier = Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(14.dp)).background(Color(0x90142035)).border(1.dp, RegisterBorder, RoundedCornerShape(14.dp)).clickable(onClick = onClick).padding(horizontal = 14.dp),
+            modifier = Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(14.dp)).background(DeepSourceColor_90142035).border(1.dp, RegisterBorder, RoundedCornerShape(14.dp)).clickable(onClick = onClick).padding(horizontal = 14.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -538,7 +763,7 @@ private fun RegisterTextField(
                     }
                 }
                 .fillMaxWidth().height(52.dp).clip(RoundedCornerShape(14.dp))
-                .background(Color(0x90142035))
+                .background(DeepSourceColor_90142035)
                 .border(1.dp, if (errorMessage != null) RegisterError else RegisterBorder, RoundedCornerShape(14.dp)),
             textStyle = TextStyle(color = RegisterText, fontSize = 15.sp),
             cursorBrush = SolidColor(RegisterText),
@@ -574,7 +799,7 @@ private fun DurationSelectionField(label: String, value: String, modifier: Modif
         Text(label, color = RegisterMuted, fontSize = 12.sp)
         Row(
             Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(14.dp))
-                .background(Color(0x90142035))
+                .background(DeepSourceColor_90142035)
                 .border(1.dp, if (hasError) RegisterError else RegisterBorder, RoundedCornerShape(14.dp))
                 .clickable(onClick = onClick).padding(horizontal = 14.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -663,7 +888,7 @@ private fun WheelNumberPicker(value: Int, maxValue: Int, onValueChange: (Int) ->
                 .fillMaxWidth()
                 .height(168.dp)
                 .clip(RoundedCornerShape(20.dp))
-                .background(Color(0x12FFFFFF), RoundedCornerShape(20.dp))
+                .background(DeepSourceColor_12FFFFFF, RoundedCornerShape(20.dp))
                 .border(1.dp, RegisterBorder, RoundedCornerShape(20.dp)),
             contentAlignment = Alignment.Center
         ) {
@@ -693,7 +918,7 @@ private fun WheelNumberPicker(value: Int, maxValue: Int, onValueChange: (Int) ->
                 }
             }
             Box(
-                Modifier.fillMaxWidth().height(itemHeight).background(Color(0x1939BFAF)).border(1.dp, RegisterTeal, RoundedCornerShape(12.dp))
+                Modifier.fillMaxWidth().height(itemHeight).background(DeepSourceColor_1939BFAF).border(1.dp, RegisterTeal, RoundedCornerShape(12.dp))
             )
         }
     }
@@ -706,7 +931,7 @@ private fun DurationSummary(hours: String, minutes: String) {
     val hoursText = hours.ifBlank { "0" }
     val minutesText = minutes.ifBlank { "00" }.padStart(2, '0')
     Row(
-        Modifier.fillMaxWidth().height(72.dp).clip(RoundedCornerShape(20.dp)).background(Color(0x90142035)).border(1.dp, Color(0x4D42C7B8), RoundedCornerShape(20.dp)).padding(horizontal = 18.dp),
+        Modifier.fillMaxWidth().height(72.dp).clip(RoundedCornerShape(20.dp)).background(DeepSourceColor_90142035).border(1.dp, DeepSourceColor_4D42C7B8, RoundedCornerShape(20.dp)).padding(horizontal = 18.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {

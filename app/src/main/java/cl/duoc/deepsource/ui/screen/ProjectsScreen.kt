@@ -1,5 +1,32 @@
 package cl.duoc.deepsource.ui.screen
 
+import cl.duoc.deepsource.ui.theme.DeepSourceTransparent
+import cl.duoc.deepsource.ui.theme.DeepSourceWhite
+
+import cl.duoc.deepsource.ui.theme.DeepSourceWhiteOverlay01
+import cl.duoc.deepsource.ui.theme.DeepSourceWhiteOverlay03
+import cl.duoc.deepsource.ui.theme.DeepSourceWhiteOverlay04
+import cl.duoc.deepsource.ui.theme.DeepSourceWhiteOverlay05
+import cl.duoc.deepsource.ui.theme.DeepSourceTealAccentOverlay02
+import cl.duoc.deepsource.ui.theme.DeepSourceTealAccentOverlay03
+import cl.duoc.deepsource.ui.theme.DeepSourceWhiteOverlay09
+import cl.duoc.deepsource.ui.theme.DeepSourceTealAccentOverlay06
+import cl.duoc.deepsource.ui.theme.DeepSourceTealAccentOverlay07
+import cl.duoc.deepsource.ui.theme.DeepSourceTealAccentOverlay10
+import cl.duoc.deepsource.ui.theme.DeepSourceBlueAccentOverlay06
+import cl.duoc.deepsource.ui.theme.DeepSourceBlueAccentOverlay08
+import cl.duoc.deepsource.ui.theme.DeepSourceTealAccentOverlay14
+import cl.duoc.deepsource.ui.theme.DeepSourceDarkSurface03
+import cl.duoc.deepsource.ui.theme.DeepSourceDarkSurface06
+import cl.duoc.deepsource.ui.theme.DeepSourceBlueAccent03
+import cl.duoc.deepsource.ui.theme.DeepSourceTealAccent08
+import cl.duoc.deepsource.ui.theme.DeepSourceTealAccent10
+import cl.duoc.deepsource.ui.theme.DeepSourceBlueAccent13
+import cl.duoc.deepsource.ui.theme.DeepSourceVioletAccent01
+import cl.duoc.deepsource.ui.theme.DeepSourceRedAccent01
+import cl.duoc.deepsource.ui.theme.DeepSourceTextBright01
+import cl.duoc.deepsource.ui.theme.DeepSourceRedAccent05
+
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
@@ -15,6 +42,9 @@ import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.ui.draw.blur
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -45,6 +75,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -83,13 +114,13 @@ import androidx.compose.foundation.border
 import cl.duoc.deepsource.ui.components.DeepSourceAnimatedBackground
 
 
-private val ScreenBackground = Color(0xFF080D1C)
-private val PrimaryTeal = Color(0xFF42C7B8)
-private val ActiveTeal = Color(0xFF2AAE9E)
-private val MainText = Color(0xFFF7FAFF)
-private val MutedText = Color(0xFFAEB9D0)
-private val SubtleText = Color(0xFF7D8AA7)
-private val GlassBorder = Color(0x26FFFFFF)
+private val ScreenBackground = DeepSourceDarkSurface03
+private val PrimaryTeal = DeepSourceTealAccent10
+private val ActiveTeal = DeepSourceTealAccent08
+private val MainText = DeepSourceTextBright01
+private val MutedText = DeepSourceVioletAccent01
+private val SubtleText = DeepSourceBlueAccent13
+private val GlassBorder = DeepSourceWhiteOverlay09
 
 @Composable
 fun ProjectsScreen(viewModel: WorkspaceViewModel, onRegisterTime: () -> Unit, onProfile: () -> Unit) {
@@ -98,11 +129,16 @@ fun ProjectsScreen(viewModel: WorkspaceViewModel, onRegisterTime: () -> Unit, on
     var showCompleted by remember { mutableStateOf(false) }
     var createDialogOpen by remember { mutableStateOf(false) }
     var projectToFinish by remember { mutableStateOf<Project?>(null) }
+    var projectDetailsId by remember { mutableStateOf<String?>(null) }
+    var projectToEdit by remember { mutableStateOf<Project?>(null) }
+    var projectToDelete by remember { mutableStateOf<Project?>(null) }
+    val catalogError by viewModel.catalogError.collectAsStateWithLifecycle()
     val createState by viewModel.createProjectState.collectAsStateWithLifecycle()
     LaunchedEffect(createState.createdProjectId) {
         if (createState.createdProjectId != null) {
             showCompleted = false
             createDialogOpen = false
+            projectToEdit = null
             viewModel.resetCreateProjectState()
         }
     }
@@ -113,13 +149,14 @@ fun ProjectsScreen(viewModel: WorkspaceViewModel, onRegisterTime: () -> Unit, on
             projectToFinish = null
         }
     }
-    val activeProjects = state.projects.filter { it.status != ProjectStatus.Finished }
-    val completedProjects = state.projects.filter { it.status == ProjectStatus.Finished }
+    val activeProjects = state.projects.filter { !it.archived && it.status != ProjectStatus.Finished }
+    val completedProjects = state.projects.filter { it.archived || it.status == ProjectStatus.Finished }
     val visibleProjects = if (showCompleted) completedProjects else activeProjects
 
     Box(modifier = Modifier.fillMaxSize()) {
         LazyColumn(
             modifier = Modifier
+                .then(if (projectDetailsId != null) Modifier.blur(12.dp) else Modifier)
                 .align(Alignment.TopCenter)
                 .widthIn(max = 900.dp)
                 .fillMaxWidth()
@@ -145,7 +182,7 @@ fun ProjectsScreen(viewModel: WorkspaceViewModel, onRegisterTime: () -> Unit, on
                             modifier = Modifier
                                 .size(34.dp)
                                 .clip(CircleShape)
-                                .background(Color(0x1A42C7B8))
+                                .background(DeepSourceTealAccentOverlay02)
                                 .border(1.dp, PrimaryTeal, CircleShape)
                                 .clickable {
                                     statusLegendExpanded = !statusLegendExpanded
@@ -188,7 +225,7 @@ fun ProjectsScreen(viewModel: WorkspaceViewModel, onRegisterTime: () -> Unit, on
                                 viewModel.resetCreateProjectState()
                                 createDialogOpen = true
                             },
-                            color = Color(0x1F2AAE9E),
+                            color = DeepSourceTealAccentOverlay03,
                             shape = RoundedCornerShape(14.dp),
                             border = BorderStroke(1.dp, PrimaryTeal)
                         ) {
@@ -204,7 +241,7 @@ fun ProjectsScreen(viewModel: WorkspaceViewModel, onRegisterTime: () -> Unit, on
             if (state.isLoading) {
                 item { Text("Cargando proyectos...", color = MutedText, modifier = Modifier.padding(horizontal = 16.dp)) }
             } else if (state.error != null) {
-                item { Text(state.error.orEmpty(), color = Color(0xFFE43939), modifier = Modifier.padding(horizontal = 16.dp)) }
+                item { Text(state.error.orEmpty(), color = DeepSourceRedAccent01, modifier = Modifier.padding(horizontal = 16.dp)) }
             }
             if (!state.isLoading && state.error == null && visibleProjects.isEmpty()) {
                 item {
@@ -216,21 +253,66 @@ fun ProjectsScreen(viewModel: WorkspaceViewModel, onRegisterTime: () -> Unit, on
                     )
                 }
             }
+            item {
+                TextButton(onClick = viewModel::refreshCatalog) { Text("Actualizar catálogo", color = PrimaryTeal) }
+                catalogError?.let { Text(it, color = DeepSourceRedAccent01, modifier = Modifier.padding(horizontal = 16.dp)) }
+            }
             items(visibleProjects, key = { it.id }) { project ->
                 ProjectCard(
                     project = project,
                     selected = project.id == state.selectedProjectId,
                     onClick = {
-                        viewModel.selectProject(project.id)
-                        onRegisterTime()
+                        if (project.archived) {
+                            projectDetailsId = project.id
+                        } else {
+                            viewModel.selectProject(project.id)
+                            onRegisterTime()
+                        }
                     },
                     iconRes = projectIconResource(project.iconIndex),
-                    onFinish = if (isAdmin && project.status != ProjectStatus.Finished && project.progress >= 1f) {
+                    onLongClick = { projectDetailsId = project.id },
+                    onFinish = if (isAdmin && !project.archived && project.status != ProjectStatus.Finished && project.progress >= 1f) {
                         { projectToFinish = project }
                     } else null,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 5.5.dp)
                 )
             }
+        }
+        projectDetailsId?.let { id ->
+            state.projects.firstOrNull { it.id == id }?.let { project ->
+                ProjectStatisticsDialog(
+                    project = project,
+                    entries = state.timeEntries.filter { it.projectId == id },
+                    users = state.users,
+                    tasks = state.tasks.filter { it.projectId == id },
+                    iconRes = projectIconResource(project.iconIndex),
+                    onDismiss = { projectDetailsId = null },
+                    onEdit = if (isAdmin && !project.archived) ({
+                        projectDetailsId = null
+                        projectToEdit = project
+                        viewModel.resetCreateProjectState()
+                        createDialogOpen = true
+                    }) else null,
+                    onDelete = if (isAdmin && !project.archived) ({
+                        projectDetailsId = null
+                        projectToDelete = project
+                    }) else null
+                )
+            } ?: run { projectDetailsId = null }
+        }
+        if (isAdmin) projectToDelete?.let { project ->
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { projectToDelete = null },
+                title = { Text("Eliminar proyecto") },
+                text = { Text("¿Eliminar \"${project.name}\" del catálogo? Su historial de horas se conserva.") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        projectToDelete = null
+                        viewModel.deleteProject(project)
+                    }) { Text("Eliminar") }
+                },
+                dismissButton = { TextButton(onClick = { projectToDelete = null }) { Text("Cancelar") } }
+            )
         }
         if (isAdmin) projectToFinish?.let { project ->
             androidx.compose.material3.AlertDialog(
@@ -246,21 +328,23 @@ fun ProjectsScreen(viewModel: WorkspaceViewModel, onRegisterTime: () -> Unit, on
                 dismissButton = {
                     TextButton(onClick = { projectToFinish = null }) { Text("Cancelar", color = MutedText) }
                 },
-                containerColor = Color(0xFF111B30)
+                containerColor = DeepSourceBlueAccent03.copy(alpha = 0.88f)
             )
         }
         if (isAdmin && createDialogOpen) {
             CreateProjectDialog(
+                project = projectToEdit,
                 isSaving = createState.isSaving,
                 error = createState.error,
                 onDismiss = {
                     if (!createState.isSaving) {
                         createDialogOpen = false
+                        projectToEdit = null
                         viewModel.resetCreateProjectState()
                     }
                 },
                 onCreate = { name, client, description, hours, iconIndex ->
-                    viewModel.createProject(name, client, description, hours, iconIndex)
+                    viewModel.createProject(name, client, description, hours, iconIndex, projectToEdit)
                 }
             )
         }
@@ -271,12 +355,12 @@ fun ProjectsScreen(viewModel: WorkspaceViewModel, onRegisterTime: () -> Unit, on
 private fun ProjectsAmbientBackground() {
     Canvas(Modifier.fillMaxSize()) {
         drawCircle(
-            brush = Brush.radialGradient(listOf(Color(0x4D1EB9A8), Color.Transparent), Offset(size.width * .92f, -size.height * .02f), size.width * .82f),
+            brush = Brush.radialGradient(listOf(DeepSourceTealAccentOverlay10, DeepSourceTransparent), Offset(size.width * .92f, -size.height * .02f), size.width * .82f),
             radius = size.width * .82f,
             center = Offset(size.width * .92f, -size.height * .02f)
         )
         drawCircle(
-            brush = Brush.radialGradient(listOf(Color(0x4D6D49DE), Color.Transparent), Offset(-size.width * .20f, size.height * .53f), size.width * 1.04f),
+            brush = Brush.radialGradient(listOf(DeepSourceBlueAccentOverlay06, DeepSourceTransparent), Offset(-size.width * .20f, size.height * .53f), size.width * 1.04f),
             radius = size.width * 1.04f,
             center = Offset(-size.width * .20f, size.height * .53f)
         )
@@ -289,7 +373,7 @@ private fun ProjectsHeader(onProfile: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .height(72.dp),
-        color = Color(0x08FFFFFF),
+        color = DeepSourceWhiteOverlay01,
         shadowElevation = 0.dp
     ) {
         Row(
@@ -313,7 +397,7 @@ private fun ProjectsHeader(onProfile: () -> Unit) {
                     .size(38.dp)
                     .clip(CircleShape)
                     .background(
-                        Color(0x2942C7B8),
+                        DeepSourceTealAccentOverlay06,
                         CircleShape
                     )
                     .clickable(onClick = onProfile),
@@ -362,13 +446,13 @@ private fun ProjectFilter(
     Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
         Surface(
             modifier = Modifier.clip(RoundedCornerShape(50)).clickable(onClick = onShowActive),
-            color = if (!showCompleted) ActiveTeal else Color(0x12FFFFFF),
+            color = if (!showCompleted) ActiveTeal else DeepSourceWhiteOverlay04,
             shape = RoundedCornerShape(50),
             border = if (showCompleted) BorderStroke(1.dp, GlassBorder) else null
         ) {
             Text(
                 "Activos · $activeCount",
-                color = if (!showCompleted) Color.White else MutedText,
+                color = if (!showCompleted) DeepSourceWhite else MutedText,
                 fontWeight = if (!showCompleted) FontWeight.Bold else FontWeight.Normal,
                 fontSize = 11.sp,
                 maxLines = 1,
@@ -377,13 +461,13 @@ private fun ProjectFilter(
         }
         Surface(
             modifier = Modifier.clip(RoundedCornerShape(50)).clickable(onClick = onShowCompleted),
-            color = if (showCompleted) ActiveTeal else Color(0x12FFFFFF),
+            color = if (showCompleted) ActiveTeal else DeepSourceWhiteOverlay04,
             shape = RoundedCornerShape(50),
             border = if (!showCompleted) BorderStroke(1.dp, GlassBorder) else null
         ) {
             Text(
                 "Completados · $completedCount",
-                color = if (showCompleted) Color.White else MutedText,
+                color = if (showCompleted) DeepSourceWhite else MutedText,
                 fontWeight = if (showCompleted) FontWeight.Bold else FontWeight.Normal,
                 fontSize = 11.sp,
                 maxLines = 1,
@@ -404,7 +488,7 @@ private fun ProjectStatusLegend(expanded: Boolean, onToggle: () -> Unit) {
     val shape = RoundedCornerShape(16.dp)
     Surface(
         modifier = Modifier.fillMaxWidth().clip(shape).clickable(onClick = onToggle),
-        color = Color(0x0EFFFFFF),
+        color = DeepSourceWhiteOverlay03,
         shape = shape,
         border = BorderStroke(1.dp, GlassBorder)
     ) {
@@ -413,7 +497,7 @@ private fun ProjectStatusLegend(expanded: Boolean, onToggle: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(9.dp)
         ) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(24.dp).background(Color(0x1A42C7B8), CircleShape), contentAlignment = Alignment.Center) { InfoGlyph() }
+                Box(Modifier.size(24.dp).background(DeepSourceTealAccentOverlay02, CircleShape), contentAlignment = Alignment.Center) { InfoGlyph() }
                 Text("Estados del proyecto", color = MainText, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 8.dp).weight(1f))
                 Text(if (expanded) "Ocultar" else "Ver", color = PrimaryTeal, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
                 LegendChevron(expanded)
@@ -435,6 +519,13 @@ private fun ProjectStatusLegend(expanded: Boolean, onToggle: () -> Unit) {
                             }
                         }
                     }
+                    Text(
+                        text = "Mantén presionado un proyecto para abrir su resumen completo: avance, horas registradas, participantes, historial y detalles.",
+                        color = MutedText,
+                        fontSize = 11.sp,
+                        lineHeight = 16.sp,
+                        modifier = Modifier.fillMaxWidth().padding(top = 5.dp)
+                    )
                 }
             }
         }
@@ -468,8 +559,9 @@ private fun LegendChevron(expanded: Boolean) {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun ProjectCard(project: Project, selected: Boolean, onClick: () -> Unit, iconRes: Int = R.drawable.ic_icono_1, modifier: Modifier = Modifier, onFinish: (() -> Unit)? = null) {
+fun ProjectCard(project: Project, selected: Boolean, onClick: () -> Unit, iconRes: Int = R.drawable.ic_icono_1, modifier: Modifier = Modifier, onFinish: (() -> Unit)? = null, onLongClick: () -> Unit = {}) {
     val accent = Color(project.status.color)
     val isFinished = project.status == ProjectStatus.Finished
     val completionPulse = rememberInfiniteTransition(label = "Pulso de proyecto terminado")
@@ -490,8 +582,8 @@ fun ProjectCard(project: Project, selected: Boolean, onClick: () -> Unit, iconRe
     )
     val cardShape = RoundedCornerShape(20.dp)
     Surface(
-        modifier = modifier.fillMaxWidth().clip(cardShape).clickable(onClick = onClick),
-        color = if (selected) Color(0xAA153C42) else Color(0x90142035),
+        modifier = modifier.fillMaxWidth().clip(cardShape).combinedClickable(onClick = onClick, onLongClick = onLongClick),
+        color = if (selected) DeepSourceTealAccentOverlay14 else DeepSourceBlueAccentOverlay08,
         shape = cardShape,
         border = BorderStroke(if (selected) 1.5.dp else 1.dp, if (selected) PrimaryTeal else GlassBorder),
         shadowElevation = if (selected) 10.dp else 0.dp
@@ -524,7 +616,7 @@ fun ProjectCard(project: Project, selected: Boolean, onClick: () -> Unit, iconRe
                     modifier = Modifier.fillMaxWidth().height(5.dp).clip(CircleShape)
                         .graphicsLayer { alpha = finishedAlpha },
                     color = accent,
-                    trackColor = Color(0x14FFFFFF)
+                    trackColor = DeepSourceWhiteOverlay05
                 )
             }
         }
@@ -554,6 +646,18 @@ private fun projectIconResource(index: Int): Int = when (index) {
     1 -> R.drawable.ic_icono_2
     2 -> R.drawable.ic_icono_3
     3 -> R.drawable.ic_icono_4
+    4 -> R.drawable.ic_icono_5
+    5 -> R.drawable.ic_icono_6
+    6 -> R.drawable.ic_icono_7
+    7 -> R.drawable.ic_icono_8
+    8 -> R.drawable.ic_icono_9
+    9 -> R.drawable.ic_icono_10
+    10 -> R.drawable.ic_icono_11
+    11 -> R.drawable.ic_icono_12
+    12 -> R.drawable.ic_icono_13
+    13 -> R.drawable.ic_icono_14
+    14 -> R.drawable.ic_icono_15
+    15 -> R.drawable.ic_icono_16
     else -> R.drawable.ic_icono_1
 }
 
@@ -561,16 +665,16 @@ private fun projectIconResource(index: Int): Int = when (index) {
 private fun SearchGlyph() {
     Canvas(Modifier.size(19.dp)) {
         val stroke = 1.8.dp.toPx()
-        drawCircle(Color(0xFFF7FAFF), size.minDimension * .29f, Offset(size.width * .43f, size.height * .43f), style = Stroke(stroke))
-        drawLine(Color(0xFFF7FAFF), Offset(size.width * .62f, size.height * .62f), Offset(size.width * .87f, size.height * .87f), stroke, StrokeCap.Round)
+        drawCircle(DeepSourceTextBright01, size.minDimension * .29f, Offset(size.width * .43f, size.height * .43f), style = Stroke(stroke))
+        drawLine(DeepSourceTextBright01, Offset(size.width * .62f, size.height * .62f), Offset(size.width * .87f, size.height * .87f), stroke, StrokeCap.Round)
     }
 }
 
 @Composable
 private fun CheckGlyph() {
     Canvas(Modifier.size(15.dp)) {
-        drawLine(Color.White, Offset(size.width * .20f, size.height * .52f), Offset(size.width * .43f, size.height * .73f), 2.dp.toPx(), StrokeCap.Round)
-        drawLine(Color.White, Offset(size.width * .43f, size.height * .73f), Offset(size.width * .80f, size.height * .28f), 2.dp.toPx(), StrokeCap.Round)
+        drawLine(DeepSourceWhite, Offset(size.width * .20f, size.height * .52f), Offset(size.width * .43f, size.height * .73f), 2.dp.toPx(), StrokeCap.Round)
+        drawLine(DeepSourceWhite, Offset(size.width * .43f, size.height * .73f), Offset(size.width * .80f, size.height * .28f), 2.dp.toPx(), StrokeCap.Round)
     }
 }
 
@@ -584,16 +688,17 @@ private fun ChevronGlyph() {
 
 @Composable
 private fun CreateProjectDialog(
+    project: Project?,
     isSaving: Boolean,
     error: String?,
     onDismiss: () -> Unit,
     onCreate: (String, String, String, Int, Int) -> Unit
 ) {
-    var name by remember { mutableStateOf("") }
-    var client by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-    var hours by remember { mutableStateOf("40") }
-    var selectedIcon by remember { mutableStateOf(0) }
+    var name by remember(project?.id) { mutableStateOf(project?.name.orEmpty()) }
+    var client by remember(project?.id) { mutableStateOf(project?.client.orEmpty()) }
+    var description by remember(project?.id) { mutableStateOf(project?.description.orEmpty()) }
+    var hours by remember(project?.id) { mutableStateOf(project?.let { (it.totalMinutes / 60).toString() } ?: "40") }
+    var selectedIcon by remember(project?.id) { mutableStateOf(project?.iconIndex ?: 0) }
     val parsedHours = hours.toIntOrNull()
     val valid = name.isNotBlank() && client.isNotBlank() && description.isNotBlank() &&
             parsedHours != null && parsedHours in 1..100000
@@ -607,13 +712,13 @@ private fun CreateProjectDialog(
     Dialog(onDismissRequest = { if (!isSaving) onDismiss() }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp).imePadding()
-                .clip(RoundedCornerShape(24.dp)).background(Color(0xFF0C1529))
+                .clip(RoundedCornerShape(24.dp)).background(DeepSourceDarkSurface06.copy(alpha = 0.75f))
                 .border(1.dp, GlassBorder, RoundedCornerShape(24.dp))
                 .verticalScroll(rememberScrollState()).padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text("Crear proyecto", color = MainText, fontSize = 21.sp, fontWeight = FontWeight.Bold)
-            Text("Agrega un proyecto a tu espacio de trabajo.", color = MutedText, fontSize = 13.sp)
+            Text(if (project == null) "Crear proyecto" else "Editar proyecto", color = MainText, fontSize = 21.sp, fontWeight = FontWeight.Bold)
+            if (project == null) Text("Agrega un proyecto a tu espacio de trabajo.", color = MutedText, fontSize = 13.sp)
             OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Nombre del proyecto") },
                 modifier = Modifier.fillMaxWidth(), singleLine = true, colors = colors)
             OutlinedTextField(value = client, onValueChange = { client = it }, label = { Text("Cliente o empresa") },
@@ -624,16 +729,20 @@ private fun CreateProjectDialog(
                 label = { Text("Horas estimadas") }, modifier = Modifier.fillMaxWidth(), singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), colors = colors)
             Text("Ícono del proyecto", color = MainText, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                (0..3).forEach { index ->
+            LazyRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                contentPadding = PaddingValues(horizontal = 2.dp, vertical = 3.dp)
+            ) {
+                items(16) { index ->
                     val selected = selectedIcon == index
                     Box(
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier
+                            .size(64.dp)
                             .clip(RoundedCornerShape(14.dp))
-                            .background(if (selected) Color(0x3030B2A6) else Color(0x12FFFFFF))
+                            .background(if (selected) DeepSourceTealAccentOverlay07 else DeepSourceWhiteOverlay04)
                             .border(1.dp, if (selected) PrimaryTeal else GlassBorder, RoundedCornerShape(14.dp))
-                            .clickable(enabled = !isSaving) { selectedIcon = index }
-                            .padding(vertical = 12.dp),
+                            .clickable(enabled = !isSaving) { selectedIcon = index },
                         contentAlignment = Alignment.Center
                     ) {
                         Image(
@@ -644,14 +753,15 @@ private fun CreateProjectDialog(
                     }
                 }
             }
-            if (error != null) Text(error, color = Color(0xFFFF8585), fontSize = 12.sp)
+            Text("Desliza para ver más iconos", color = MutedText, fontSize = 11.sp)
+            if (error != null) Text(error, color = DeepSourceRedAccent05, fontSize = 12.sp)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
                 TextButton(onClick = onDismiss, enabled = !isSaving) { Text("Cancelar", color = MutedText) }
                 Button(onClick = { if (valid) onCreate(name, client, description, parsedHours!!, selectedIcon) },
                     enabled = valid && !isSaving,
                     colors = ButtonDefaults.buttonColors(containerColor = ActiveTeal),
                     shape = RoundedCornerShape(12.dp)) {
-                    Text(if (isSaving) "Guardando..." else "Crear proyecto", color = Color.White)
+                    Text(if (isSaving) "Guardando..." else if (project == null) "Crear proyecto" else "Guardar cambios", color = DeepSourceWhite)
                 }
             }
         }

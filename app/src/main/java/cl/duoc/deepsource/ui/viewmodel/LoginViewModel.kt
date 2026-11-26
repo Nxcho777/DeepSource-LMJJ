@@ -53,6 +53,14 @@ class LoginViewModel(private val savedStateHandle: SavedStateHandle) : ViewModel
 
     fun loginEmail(): String = _uiState.value.username.trim()
 
+    fun showGoogleHelp() = _uiState.update {
+        it.copy(loginError = "Esta versión usa cuentas locales de DeepSource. Ingresa con tu correo y contraseña.")
+    }
+
+    fun showPasswordHelp() = _uiState.update {
+        it.copy(loginError = "Solicita las credenciales de evaluación al equipo de DeepSource.")
+    }
+
     fun validateLogin(): Boolean {
         val email = _uiState.value.username.trim()
         val password = _uiState.value.password

@@ -7,6 +7,7 @@ import android.view.View
 import android.widget.RemoteViews
 import android.widget.RemoteViewsService
 import cl.duoc.deepsource.MainActivity
+import cl.duoc.deepsource.ui.component.ProjectIcons
 import cl.duoc.deepsource.R
 import cl.duoc.deepsource.data.repository.DeepSourceRepository
 import cl.duoc.deepsource.domain.model.Project
@@ -42,7 +43,7 @@ private class ProjectListFactory(
                     DeepSourceRepository
                         .getInstance(context)
                         .getProjects()
-                        .filterNot { it.isCompleted }
+                        .filterNot { it.isCompleted || it.archived }
                 }
             }
         } catch (error: Exception) {
@@ -77,12 +78,7 @@ private class ProjectListFactory(
 
         row.setImageViewResource(
             R.id.widget_project_icon,
-            when (project.iconIndex) {
-                1 -> R.drawable.ic_icono_2
-                2 -> R.drawable.ic_icono_3
-                3 -> R.drawable.ic_icono_4
-                else -> R.drawable.ic_icono_1
-            }
+            ProjectIcons.resource(project.iconIndex)
         )
 
         val percentage = if (project.totalMinutes > 0) {
@@ -159,12 +155,12 @@ private class ProjectListFactory(
             putExtra("widget_project_icon_index", project.iconIndex)
         }
 
-        // La fila completa debe enviar la identidad de SU proyecto, no solo el botón.
-        row.setOnClickFillInIntent(R.id.widget_project_row, clickIntent)
+        // La fila abre el registro manual; el botón abre el cronómetro del widget.
         row.setOnClickFillInIntent(
-            R.id.widget_project_action,
+            R.id.widget_project_row,
             Intent(clickIntent).putExtra("widget_open_register", true)
         )
+        row.setOnClickFillInIntent(R.id.widget_project_action, clickIntent)
 
         row.setOnClickFillInIntent(
             R.id.widget_project_name,

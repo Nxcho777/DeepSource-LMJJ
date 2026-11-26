@@ -1,6 +1,15 @@
 
 package cl.duoc.deepsource.ui.screen
 
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_FF005A57
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_FF008D78
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_FF00E5C3
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_FF050B19
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_FF061728
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_FF080D20
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_FF090B1D
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_FF17153D
+
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.EaseInOutSine
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -45,8 +54,8 @@ import kotlin.math.hypot
 import kotlin.random.Random
 import kotlinx.coroutines.launch
 
-private val SplashBackground = Color(0xFF050B19)
-private val SplashTeal = Color(0xFF00E5C3)
+private val SplashBackground = DeepSourceColor_FF050B19
+private val SplashTeal = DeepSourceColor_FF00E5C3
 
 private const val SPLASH_DURATION = 2600L
 private const val GLOW_MOVE_DURATION = 1250
@@ -232,10 +241,10 @@ fun SplashScreen(
             drawRect(
                 brush = Brush.verticalGradient(
                     colors = listOf(
-                        Color(0xFF050B19),
-                        Color(0xFF061728),
-                        Color(0xFF080D20),
-                        Color(0xFF090B1D)
+                        DeepSourceColor_FF050B19,
+                        DeepSourceColor_FF061728,
+                        DeepSourceColor_FF080D20,
+                        DeepSourceColor_FF090B1D
                     )
                 )
             )
@@ -251,10 +260,10 @@ fun SplashScreen(
             drawCircle(
                 brush = Brush.radialGradient(
                     colors = listOf(
-                        Color(0xFF008D78).copy(
+                        DeepSourceColor_FF008D78.copy(
                             alpha = 0.60f * glowAlpha
                         ),
-                        Color(0xFF005A57).copy(
+                        DeepSourceColor_FF005A57.copy(
                             alpha = 0.22f * glowAlpha
                         ),
                         Color.Transparent
@@ -270,7 +279,7 @@ fun SplashScreen(
             drawCircle(
                 brush = Brush.radialGradient(
                     colors = listOf(
-                        Color(0xFF17153D).copy(alpha = 0.75f),
+                        DeepSourceColor_FF17153D.copy(alpha = 0.75f),
                         Color.Transparent
                     ),
                     center = Offset(

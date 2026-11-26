@@ -15,6 +15,7 @@ import android.util.Log
 import android.view.View
 import android.widget.RemoteViews
 import cl.duoc.deepsource.MainActivity
+import cl.duoc.deepsource.ui.component.ProjectIcons
 import cl.duoc.deepsource.R
 import cl.duoc.deepsource.data.repository.DeepSourceRepository
 import cl.duoc.deepsource.navigation.AppDestination
@@ -25,6 +26,7 @@ class DeepSourceWidgetProvider : AppWidgetProvider() {
     companion object {
         private const val ACTION_SELECT = "cl.duoc.deepsource.widget.SELECT"
         private const val ACTION_OPEN_REGISTER = "cl.duoc.deepsource.widget.OPEN_REGISTER"
+        private const val ACTION_NEXT_TASK = "cl.duoc.deepsource.widget.NEXT_TASK"
         private const val ACTION_START = "cl.duoc.deepsource.widget.START"
         private const val ACTION_PAUSE = "cl.duoc.deepsource.widget.PAUSE"
         private const val ACTION_FINISH = "cl.duoc.deepsource.widget.FINISH"
@@ -81,6 +83,7 @@ class DeepSourceWidgetProvider : AppWidgetProvider() {
 
             if(detail) {
                 views.setOnClickPendingIntent(R.id.widget_back,action(context,widgetId,ACTION_BACK))
+                views.setOnClickPendingIntent(R.id.widget_task_select,action(context,widgetId,ACTION_NEXT_TASK))
                 views.setOnClickPendingIntent(R.id.widget_start,action(context,widgetId,ACTION_START))
                 views.setOnClickPendingIntent(R.id.widget_pause,action(context,widgetId,ACTION_PAUSE))
                 views.setOnClickPendingIntent(R.id.widget_finish,action(context,widgetId,ACTION_FINISH))
@@ -132,13 +135,9 @@ class DeepSourceWidgetProvider : AppWidgetProvider() {
                 views.setTextViewTextSize(R.id.widget_start, TypedValue.COMPLEX_UNIT_SP, buttonText)
                 views.setTextViewTextSize(R.id.widget_pause, TypedValue.COMPLEX_UNIT_SP, buttonText)
                 views.setTextViewTextSize(R.id.widget_finish, TypedValue.COMPLEX_UNIT_SP, buttonText)
-                views.setImageViewResource(R.id.widget_selected_icon, when (WidgetTimer.iconIndex(context,widgetId)) {
-                    1 -> R.drawable.ic_icono_2
-                    2 -> R.drawable.ic_icono_3
-                    3 -> R.drawable.ic_icono_4
-                    else -> R.drawable.ic_icono_1
-                })
+                views.setImageViewResource(R.id.widget_selected_icon, ProjectIcons.resource(WidgetTimer.iconIndex(context,widgetId)))
                 views.setTextViewText(R.id.widget_selected_name,WidgetTimer.name(context,widgetId))
+                views.setTextViewText(R.id.widget_task_select, "Tarea: " + WidgetTimer.taskName(context,widgetId) + "  ›")
                 views.setChronometer(R.id.widget_timer,SystemClock.elapsedRealtime()-elapsed,null,status=="running")
                 views.setTextViewText(R.id.widget_timer_status,when(status) {
                     "running"->"En progreso";"paused"->"En pausa";"saving"->"Guardando…";else->"Listo para iniciar"
@@ -213,8 +212,7 @@ class DeepSourceWidgetProvider : AppWidgetProvider() {
         }
         when(intent.action) {
             ACTION_SELECT -> {
-                // El botón ▶ abre el registro de horas de ese proyecto.
-                // Pulsar el resto de la fila conserva la selección del cronómetro.
+                // Pulsar la fila abre RegisterTimeScreen; el botón abre el cronómetro del widget.
                 if (intent.getBooleanExtra("widget_open_register", false)) {
                     val projectId = intent.getStringExtra("widget_project_id") ?: return
                     val open = Intent(context, MainActivity::class.java).apply {
@@ -236,7 +234,49 @@ class DeepSourceWidgetProvider : AppWidgetProvider() {
                     intent.getIntExtra("widget_project_icon_index",0)
                 )
             }
-            ACTION_START -> WidgetTimer.start(context,id)
+            ACTION_NEXT_TASK -> {
+                if (WidgetTimer.status(context,id) == "running" || WidgetTimer.status(context,id) == "saving" ||
+                    WidgetTimer.elapsed(context,id) > 0L) return
+                val project = WidgetTimer.project(context,id) ?: return
+                val pending = goAsync()
+                Thread {
+                    try {
+                        val tasks = runBlocking { DeepSourceRepository.getInstance(context).getTasks(project) }
+                        if (tasks.isNotEmpty()) {
+                            val current = tasks.indexOfFirst { it.id == WidgetTimer.taskId(context,id) }
+                            val next = tasks[(current + 1) % tasks.size]
+                            WidgetTimer.setTask(context,id,next.id,next.name)
+                        }
+                    } catch (e: Exception) {
+                        Log.e("DeepSourceWidget","No se pudieron cargar tareas",e)
+                    } finally {
+                        updateWidget(context,manager,id)
+                        pending.finish()
+                    }
+                }.start()
+                return
+            }
+            ACTION_START -> {
+                if (WidgetTimer.taskId(context,id) == null) {
+                    val project = WidgetTimer.project(context,id) ?: return
+                    val pending = goAsync()
+                    Thread {
+                        try {
+                            val tasks = runBlocking { DeepSourceRepository.getInstance(context).getTasks(project) }
+                            val chosen = tasks.firstOrNull()
+                            if (chosen != null) {
+                                WidgetTimer.setTask(context,id,chosen.id,chosen.name)
+                                WidgetTimer.start(context,id)
+                            }
+                        } finally {
+                            updateWidget(context,manager,id)
+                            pending.finish()
+                        }
+                    }.start()
+                    return
+                }
+                WidgetTimer.start(context,id)
+            }
             ACTION_PAUSE -> if(WidgetTimer.status(context,id)=="running") WidgetTimer.pause(context,id)
                 else WidgetTimer.start(context,id)
             ACTION_BACK -> WidgetTimer.showList(context,id)
@@ -257,7 +297,7 @@ class DeepSourceWidgetProvider : AppWidgetProvider() {
                                 .getString("activeUserId",DeepSourceRepository.DEFAULT_USER_ID)
                                 ?:DeepSourceRepository.DEFAULT_USER_ID
                             DeepSourceRepository.getInstance(context).addTimeEntry(
-                                project,userId,minutes,LocalDate.now().toString(),"Tiempo registrado desde widget"
+                                project,userId,minutes,LocalDate.now().toString(),"Tiempo registrado desde widget", WidgetTimer.taskId(context,id)
                             )
                         }
                         WidgetTimer.clear(context,id)

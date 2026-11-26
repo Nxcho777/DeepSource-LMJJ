@@ -13,6 +13,9 @@ import cl.duoc.deepsource.domain.model.TimeEntry
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
+import java.time.LocalDate
+import java.time.DayOfWeek
+import java.time.temporal.TemporalAdjusters
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -27,6 +30,9 @@ class DeepSourceRepositoryTest {
     private lateinit var context: Context
     private lateinit var database: DeepSourceDatabase
     private val databaseName = "deepsource-repository-test.db"
+
+    private fun monday() = LocalDate.now(java.time.ZoneId.of("America/Santiago"))
+        .with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).toString()
 
     @Before
     fun setUp() {
@@ -47,14 +53,14 @@ class DeepSourceRepositoryTest {
         repository.seedIfNeeded()
         repository.seedIfNeeded()
         assertEquals(4, repository.observeProjects().first().size)
-        assertEquals(1, repository.observeTimeEntries().first().size)
+        assertEquals(5, repository.observeTimeEntries().first().size)
 
         database.close()
         database = openDatabase()
         val reopened = DeepSourceRepository(database)
         reopened.seedIfNeeded()
         assertEquals(4, reopened.observeProjects().first().size)
-        assertEquals(1, reopened.observeTimeEntries().first().size)
+        assertEquals(5, reopened.observeTimeEntries().first().size)
         assertEquals(600, reopened.getProjects().first { it.id == "project-1" }.registeredMinutes)
     }
 
@@ -64,14 +70,14 @@ class DeepSourceRepositoryTest {
         val entry = repository.addTimeEntry("project-1", "user-2", 45, "2026-11-02", "Prueba")
         assertEquals("user-2", entry.userId)
         assertEquals(645, repository.getProjects().first { it.id == "project-1" }.registeredMinutes)
-        assertEquals(2, repository.observeTimeEntries().first().size)
+        assertEquals(6, repository.observeTimeEntries().first().size)
 
         val failure = runCatching {
             repository.addTimeEntry("project-1", "missing-user", 30, "2026-11-02", "Inválido")
         }
         assertTrue(failure.isFailure)
         assertEquals(645, repository.getProjects().first { it.id == "project-1" }.registeredMinutes)
-        assertEquals(2, repository.observeTimeEntries().first().size)
+        assertEquals(6, repository.observeTimeEntries().first().size)
     }
 
     @Test
@@ -82,31 +88,35 @@ class DeepSourceRepositoryTest {
         val viewModel = WorkspaceViewModel(repository, handle, {}, TimeEntryNotifier { entry, projectName ->
             notifications += entry to projectName
             true
-        })
+        }, context)
         withTimeout(5_000) { viewModel.uiState.first { !it.isLoading && it.projects.isNotEmpty() } }
         viewModel.selectProject("project-2")
         viewModel.selectUser("user-2")
-        viewModel.setDate("2026-11-02")
+        val date = monday()
+        viewModel.setDate(date)
         viewModel.setHours("01")
         viewModel.setMinutes("15")
-        viewModel.setTask("Diseño")
-        val restored = WorkspaceViewModel(repository, handle, {}, TimeEntryNotifier { _, _ -> false })
+        viewModel.selectTask(repository.getTasks("project-2").first { it.id == "demo-task-project-2-1" })
+        viewModel.setDescription("Diseño")
+        val restored = WorkspaceViewModel(repository, handle, {}, TimeEntryNotifier { _, _ -> false }, context)
         assertEquals("project-2", restored.uiState.value.selectedProjectId)
         assertEquals("user-2", restored.registerState.value.userId)
         assertEquals(75, restored.registerState.value.durationMinutes)
-        assertEquals("Diseño", restored.registerState.value.task)
+        assertEquals("Diseño móvil", restored.registerState.value.task)
+        assertEquals("demo-task-project-2-1", restored.registerState.value.selectedTaskId)
+        assertEquals("Diseño", restored.registerState.value.description)
         viewModel.saveTimeEntry()
         viewModel.saveTimeEntry()
         val receipt = withTimeout(5_000) { viewModel.registerState.first { it.receipt != null }.receipt!! }
         assertEquals("App Boreal", receipt.projectName)
         assertEquals("Diseño", receipt.taskName)
-        assertEquals("2026-11-02", receipt.date)
+        assertEquals(date, receipt.date)
         assertEquals(75, receipt.durationMinutes)
         assertEquals("1 h 15 min", receipt.durationLabel)
         viewModel.saveTimeEntry()
         assertEquals(1_575, repository.getProjects().first { it.id == "project-2" }.registeredMinutes)
         val entries = repository.observeTimeEntries().first()
-        assertEquals(2, entries.size)
+        assertEquals(6, entries.size)
         assertTrue(entries.any { it.id == receipt.entryId && it.projectId == "project-2" && it.userId == "user-2" && it.durationMinutes == 75 })
         assertEquals(1, notifications.size)
         assertEquals(receipt.entryId, notifications.single().first.id)
@@ -122,7 +132,7 @@ class DeepSourceRepositoryTest {
         val viewModel = WorkspaceViewModel(repository, SavedStateHandle(), {}, TimeEntryNotifier { _, _ ->
             notificationCount++
             true
-        })
+        }, context)
         withTimeout(5_000) { viewModel.uiState.first { !it.isLoading && it.projects.isNotEmpty() } }
         viewModel.setHours("01")
         viewModel.setTask("Prueba")
@@ -131,7 +141,7 @@ class DeepSourceRepositoryTest {
         withTimeout(5_000) { viewModel.registerState.first { it.isError } }
         assertNull(viewModel.registerState.value.receipt)
         assertEquals(0, notificationCount)
-        assertEquals(1, repository.observeTimeEntries().first().size)
+        assertEquals(5, repository.observeTimeEntries().first().size)
     }
 
     @Test
@@ -139,10 +149,11 @@ class DeepSourceRepositoryTest {
         val repository = DeepSourceRepository(database)
         val viewModel = WorkspaceViewModel(repository, SavedStateHandle(), {}, TimeEntryNotifier { _, _ ->
             throw SecurityException("POST_NOTIFICATIONS denied")
-        })
+        }, context)
         withTimeout(5_000) { viewModel.uiState.first { !it.isLoading && it.projects.isNotEmpty() } }
         viewModel.setMinutes("30")
-        viewModel.setTask("Prueba sin permiso")
+        viewModel.selectTask(repository.getTasks("project-1").first())
+        viewModel.setDate(monday())
         viewModel.saveTimeEntry()
         withTimeout(5_000) { viewModel.registerState.first { it.receipt != null } }
         assertFalse(viewModel.registerState.value.isError)

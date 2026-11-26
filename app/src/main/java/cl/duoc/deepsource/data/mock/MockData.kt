@@ -43,8 +43,13 @@ object MockData {
         )
     )
 
-    // Project minutes are existing totals; this entry is historical detail within that total.
+    // Registros de demostración que explican exactamente los minutos iniciales.
+    // No representan fichajes reales de usuarios; son datos de ejemplo.
     val timeEntries = listOf(
-        TimeEntry(id = "entry-1", projectId = "project-1", userId = currentUser.id, durationMinutes = 150, date = "2026-10-03", note = "Configuración inicial")
+        TimeEntry("entry-1", "project-1", currentUser.id, 150, "2026-10-03", "Configuración inicial (demo)"),
+        TimeEntry("demo-atlas-restante", "project-1", currentUser.id, 450, "2026-10-03", "Horas iniciales de ejemplo"),
+        TimeEntry("demo-boreal", "project-2", currentUser.id, 1500, "2026-10-03", "Horas iniciales de ejemplo"),
+        TimeEntry("demo-nova", "project-3", currentUser.id, 3000, "2026-10-03", "Horas iniciales de ejemplo"),
+        TimeEntry("demo-lumen", "project-4", currentUser.id, 4500, "2026-10-03", "Horas iniciales de ejemplo")
     )
 }

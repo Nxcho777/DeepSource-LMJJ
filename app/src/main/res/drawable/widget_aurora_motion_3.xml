@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
   <item><shape android:shape="rectangle">
-    <gradient android:angle="135" android:startColor="#15384F" android:centerColor="#102B46" android:endColor="#16294A"/>
-    <corners android:radius="28dp"/><stroke android:width="1dp" android:color="#285B76"/>
+    <gradient android:angle="135" android:startColor="@color/deepsource_color_15384f" android:centerColor="@color/deepsource_color_102b46" android:endColor="@color/deepsource_color_16294a"/>
+    <corners android:radius="28dp"/><stroke android:width="1dp" android:color="@color/deepsource_color_285b76"/>
   </shape></item>
   <item android:left="-85dp" android:top="-110dp" android:right="110dp" android:bottom="85dp">
-    <shape android:shape="oval"><gradient android:type="radial" android:gradientRadius="220dp" android:startColor="#1630B2A6" android:endColor="#0030B2A6"/></shape>
+    <shape android:shape="oval"><gradient android:type="radial" android:gradientRadius="220dp" android:startColor="@color/deepsource_color_1630b2a6" android:endColor="@color/deepsource_color_0030b2a6"/></shape>
   </item>
 </layer-list>

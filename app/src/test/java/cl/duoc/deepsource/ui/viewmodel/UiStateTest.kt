@@ -26,10 +26,10 @@ class UiStateTest {
     @Test
     fun timeValidationRejectsEmptyTaskAndInvalidDuration() {
         assertFalse(RegisterTimeUiState(task = "Trabajo").isValid)
-        assertFalse(RegisterTimeUiState(hours = "24", minutes = "00", task = "Trabajo").isValid)
-        assertFalse(RegisterTimeUiState(hours = "01", minutes = "60", task = "Trabajo").isValid)
+        assertFalse(RegisterTimeUiState(hours = "24", minutes = "00", task = "Trabajo", selectedTaskId = "task-1").isValid)
+        assertFalse(RegisterTimeUiState(hours = "01", minutes = "60", task = "Trabajo", selectedTaskId = "task-1").isValid)
         assertFalse(RegisterTimeUiState(hours = "01", minutes = "30", task = "  ").isValid)
-        assertTrue(RegisterTimeUiState(hours = "01", minutes = "30", task = "Trabajo").isValid)
+        assertTrue(RegisterTimeUiState(hours = "01", minutes = "30", task = "Trabajo", selectedTaskId = "task-1").isValid)
         assertEquals(90, RegisterTimeUiState(hours = "01", minutes = "30").durationMinutes)
     }
 

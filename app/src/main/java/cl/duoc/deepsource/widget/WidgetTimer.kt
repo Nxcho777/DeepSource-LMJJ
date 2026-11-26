@@ -10,6 +10,11 @@ internal object WidgetTimer {
     fun showDetail(context: Context,id: Int) { prefs(context).edit().putBoolean(key(id,"detail"),true).apply() }
     fun showList(context: Context,id: Int) { prefs(context).edit().putBoolean(key(id,"detail"),false).apply() }
     fun project(context: Context, id: Int) = prefs(context).getString(key(id,"project"), null)
+    fun taskId(context: Context, id: Int) = prefs(context).getString(key(id, "taskId"), null)
+    fun taskName(context: Context, id: Int) = prefs(context).getString(key(id, "taskName"), "Seleccionar tarea") ?: "Seleccionar tarea"
+    fun setTask(context: Context, id: Int, taskId: String, name: String) {
+        prefs(context).edit().putString(key(id, "taskId"), taskId).putString(key(id, "taskName"), name).apply()
+    }
     fun iconIndex(context: Context,id: Int) = prefs(context).getInt(key(id,"iconIndex"),0)
     fun name(context: Context, id: Int) = prefs(context).getString(key(id,"name"), "") ?: ""
     fun status(context: Context, id: Int) = prefs(context).getString(key(id,"status"), "ready") ?: "ready"
@@ -25,6 +30,7 @@ internal object WidgetTimer {
     }
     fun select(context: Context, id: Int, projectId: String, projectName: String, iconIndex: Int) {
         prefs(context).edit().putString(key(id,"project"),projectId).putString(key(id,"name"),projectName).putInt(key(id,"iconIndex"),iconIndex)
+            .remove(key(id,"taskId")).remove(key(id,"taskName"))
             .putBoolean(key(id,"detail"),true).putString(key(id,"status"),"ready").putLong(key(id,"accumulated"),0L).apply()
     }
     fun selectOrRestore(context: Context, id: Int, projectId: String, projectName: String, iconIndex: Int) {
@@ -41,12 +47,18 @@ internal object WidgetTimer {
         }
         val pref = prefs(context)
         if (current != null && status(context,id) == "paused") {
-            pref.edit().putLong(key(id,"saved.$current"),elapsed(context,id)).apply()
+            pref.edit()
+                .putLong(key(id,"saved.$current"),elapsed(context,id))
+                .putString(key(id,"savedTask.$current"),taskId(context,id))
+                .putString(key(id,"savedTaskName.$current"),taskName(context,id))
+                .apply()
         }
         val saved = pref.getLong(key(id,"saved.$projectId"),0L)
         select(context,id,projectId,projectName,iconIndex)
         if (saved > 0L) {
             pref.edit().putLong(key(id,"accumulated"),saved)
+                .putString(key(id,"taskId"),pref.getString(key(id,"savedTask.$projectId"),null))
+                .putString(key(id,"taskName"),pref.getString(key(id,"savedTaskName.$projectId"),null))
                 .putString(key(id,"status"),"paused").apply()
         }
     }
@@ -71,8 +83,9 @@ internal object WidgetTimer {
     }
     fun clear(context: Context,id: Int) {
         val current = project(context,id)
-        if (current != null) prefs(context).edit().remove(key(id,"saved.$current")).apply()
+        if (current != null) prefs(context).edit().remove(key(id,"saved.$current"))
+            .remove(key(id,"savedTask.$current")).remove(key(id,"savedTaskName.$current")).apply()
         prefs(context).edit().remove(key(id,"project")).remove(key(id,"name"))
-            .remove(key(id,"status")).remove(key(id,"iconIndex")).remove(key(id,"detail")).remove(key(id,"accumulated")).apply()
+            .remove(key(id,"status")).remove(key(id,"taskId")).remove(key(id,"taskName")).remove(key(id,"iconIndex")).remove(key(id,"detail")).remove(key(id,"accumulated")).apply()
     }
 }

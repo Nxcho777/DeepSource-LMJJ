@@ -2,10 +2,10 @@
     <gradient
         android:centerX="0.48"
         android:centerY="0.0"
-        android:endColor="#F0040F1D"
+        android:endColor="@color/deepsource_color_f0040f1d"
         android:gradientRadius="440dp"
-        android:startColor="#F00E3952"
+        android:startColor="@color/deepsource_color_f00e3952"
         android:type="radial" />
-    <stroke android:width="2dp" android:color="#FF164B79" />
+    <stroke android:width="2dp" android:color="@color/deepsource_color_ff164b79" />
     <corners android:radius="30dp" />
 </shape>

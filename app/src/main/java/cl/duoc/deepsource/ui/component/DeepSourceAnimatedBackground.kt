@@ -1,6 +1,13 @@
 
 package cl.duoc.deepsource.ui.components
 
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_FF080D1C
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_FF1C327C
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_FF209479
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_FF25D6C0
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_FF5264D9
+import cl.duoc.deepsource.ui.theme.DeepSourceColor_FF8057D6
+
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
@@ -21,14 +28,14 @@ import kotlin.math.PI
 import kotlin.math.sin
 import kotlin.random.Random
 
-private val AuroraBackground = Color(0xFF080D1C)
+private val AuroraBackground = DeepSourceColor_FF080D1C
 
 private val AuroraColors = listOf(
-    Color(0xFF1C327C),
-    Color(0xFF209479),
-    Color(0xFF25D6C0),
-    Color(0xFF5264D9),
-    Color(0xFF8057D6)
+    DeepSourceColor_FF1C327C,
+    DeepSourceColor_FF209479,
+    DeepSourceColor_FF25D6C0,
+    DeepSourceColor_FF5264D9,
+    DeepSourceColor_FF8057D6
 )
 
 private class AuroraLayer(
@@ -66,8 +73,10 @@ fun DeepSourceAnimatedBackground(
         }
     }
 
-    auroras.forEach { aurora ->
-        AuroraLayerAnimation(aurora)
+    if (cl.duoc.deepsource.ui.animation.motionDurationMillis(1) > 0) {
+        auroras.forEach { aurora ->
+            AuroraLayerAnimation(aurora)
+        }
     }
 
     Canvas(modifier.fillMaxSize()) {
