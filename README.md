@@ -4,14 +4,14 @@ DeepSource permite organizar proyectos y tareas y registrar las horas que el equ
 
 ## Inicio rápido (Windows / Android Studio)
 
-Para la presentación se utiliza la variante **debug** en el emulador. No necesita el proxy HTTPS del APK firmado, Docker ni una base de datos externa.
+Para ejecutar el proyecto desde Android Studio, utilizar la variante **debug** en el emulador. No necesita el proxy HTTPS del APK firmado, Docker ni una base de datos externa.
 
 ### 1. Abrir el proyecto y verificar Java
 
 Abrir PowerShell. Si el proyecto ya está descargado, entrar a su carpeta:
 
 ```powershell
-cd E:\DeepSource-LMJJ-ev4
+cd E:\DeepSource-LMJJ-ev4 # Ajustar según la ubicación del proyecto
 java -version
 Test-Path .\backend\projects\build.gradle.kts
 Test-Path .\backend\tasks\build.gradle.kts
@@ -25,7 +25,7 @@ git clone --branch ev4 https://github.com/Nxcho777/DeepSource-LMJJ.git
 
 Requisitos: JDK 17, Android SDK 35, Android Studio, emulador o dispositivo API 24 o superior e Internet para dependencias y feriados. Gradle 8.9, AGP 8.7.3 y Kotlin 2.0.21 ya están configurados; no es necesario actualizarlos.
 
-Si PowerShell utiliza otro Java, en el equipo de evaluación se puede seleccionar el JDK instalado así (ajustar la ruta en otros equipos):
+Si PowerShell utiliza otro Java, se puede seleccionar el JDK instalado así (ajustar la ruta según el equipo):
 
 ```powershell
 $env:JAVA_HOME = 'C:\Program Files\Eclipse Adoptium\jdk-17.0.20.101-hotspot'
@@ -46,13 +46,13 @@ Si no aparecen procesos, continuar. Si ya hay servicios de esta misma copia func
 Desde la raíz, ejecutar este bloque para abrir dos terminales independientes:
 
 ```powershell
-Start-Process powershell.exe -ArgumentList '-NoExit','-Command','cd E:\DeepSource-LMJJ-ev4; .\gradlew.bat -p backend/projects bootRun'
-Start-Process powershell.exe -ArgumentList '-NoExit','-Command','cd E:\DeepSource-LMJJ-ev4; .\gradlew.bat -p backend/tasks bootRun'
+Start-Process powershell.exe -WorkingDirectory (Get-Location).Path -ArgumentList '-NoExit','-Command','.\gradlew.bat -p backend/projects bootRun'
+Start-Process powershell.exe -WorkingDirectory (Get-Location).Path -ArgumentList '-NoExit','-Command','.\gradlew.bat -p backend/tasks bootRun'
 ```
 
-Si la ruta del proyecto es distinta, reemplazarla en ambos comandos. Alternativamente, abrir dos terminales en la raíz y ejecutar `.\gradlew.bat -p backend/projects bootRun` en una y `.\gradlew.bat -p backend/tasks bootRun` en la otra.
+Alternativamente, abrir dos terminales en la raíz y ejecutar `.\gradlew.bat -p backend/projects bootRun` en una y `.\gradlew.bat -p backend/tasks bootRun` en la otra.
 
-Esperar los mensajes `Started ProjectApplication` y `Started TaskApplication`. Mantener ambas ventanas abiertas durante la demostración. H2 crea sus archivos de datos automáticamente.
+Esperar los mensajes `Started ProjectApplication` y `Started TaskApplication`. Mantener ambas ventanas abiertas mientras se utiliza la aplicación. H2 crea sus archivos de datos automáticamente.
 
 ### 4. Verificar el backend
 
@@ -81,20 +81,11 @@ Ambas respuestas deben indicar HTTP 200. Una lista `[]` es válida en una base n
 | Usuario | `marina.soto@deepsource.cl` | `deepsource` |
 | Administrador | `admin@deepsource.cl` | `deepsource-admin` |
 
-Son cuentas locales de evaluación, no credenciales de producción. Usar el administrador para demostrar CRUD.
-
-### 7. Recorrido para la presentación
-
-1. Iniciar sesión como administrador.
-2. Crear un proyecto, mantener pulsada su tarjeta y editarlo desde el diálogo de estadísticas.
-3. En Registrar tiempo > Seleccionar tarea, crear y editar una tarea.
-4. Registrar horas y consultar las estadísticas.
-5. Abrir el calendario y comprobar el consumo de feriados de Chile. El aviso solo aparece para una fecha nacional festiva seleccionada; no alterar la fecha del dispositivo sin necesidad.
-6. Eliminar una tarea y un proyecto de demostración y comprobar que se conserva el historial.
-7. Mostrar widget, temporizador, notificaciones y perfil.
-8. Mostrar el informe de cobertura, el APK firmado en Releases y Trello.
+Son cuentas locales de demostración, no credenciales de producción. La cuenta de administrador permite gestionar el catálogo.
 
 ### Solución de problemas
+
+- **Parpadeo o pantalla negra del emulador:** detener el dispositivo virtual y, en Device Manager > Edit > Additional settings, configurar Graphics acceleration: Software y Default boot: Cold. Reiniciar el emulador.
 
 - **Incompatible Gradle JVM version:** seleccionar Java 17 en Gradle JDK; no actualizar Gradle.
 - **Sin conexión al catálogo:** verificar ambos HTTP 200, pulsar Actualizar catálogo y comprobar las URL desde Chrome del emulador (`http://10.0.2.2:8081/api/v1/projects` y `http://10.0.2.2:8082/api/v1/tasks`). Si se cambió de backend, utilizar un emulador limpio. Borrar almacenamiento solo en una instalación de demostración sin datos importantes: elimina horas, sesión y Room local.
@@ -106,16 +97,16 @@ Para finalizar, detener los servicios con Ctrl+C en sus respectivas terminales. 
 
 ## Configuración técnica de ejecución
 
-Ambos usan Spring Boot, Spring Data JPA y H2 en modo archivo. Escuchan en loopback, en los puertos 8081 y 8082. Cada proceso abre su propio archivo H2. `DATA_DIR` permite indicar la carpeta de datos, `PORT` el puerto del proceso y `BIND_ADDRESS` la interfaz. El servicio de tareas consulta proyectos mediante `PROJECTS_URL` (por defecto, `http://127.0.0.1:8081`). El modo de evaluación es local o en una red restringida. Las credenciales de H2, si se configuran, entran mediante `DB_USER` y `DB_PASSWORD`.
+Ambos usan Spring Boot, Spring Data JPA y H2 en modo archivo. Escuchan en loopback, en los puertos 8081 y 8082. Cada proceso abre su propio archivo H2. `DATA_DIR` permite indicar la carpeta de datos, `PORT` el puerto del proceso y `BIND_ADDRESS` la interfaz. El servicio de tareas consulta proyectos mediante `PROJECTS_URL` (por defecto, `http://127.0.0.1:8081`). El entorno de ejecución está previsto para uso local o en una red restringida. Las credenciales de H2, si se configuran, entran mediante `DB_USER` y `DB_PASSWORD`.
 
 ### Variantes y dispositivos
 
 - **Emulador:** la variante debug usa `10.0.2.2:8081` y `10.0.2.2:8082`.
 - **Dispositivo USB:** ejecutar `adb reverse tcp:8081 tcp:8081` y `adb reverse tcp:8082 tcp:8082`. Compilar con `-PDS_DEBUG_PROJECTS_URL=http://127.0.0.1:8081 -PDS_DEBUG_TASKS_URL=http://127.0.0.1:8082`.
-- **Release:** configurar `DS_RELEASE_PROJECTS_URL` y `DS_RELEASE_TASKS_URL` con direcciones HTTPS accesibles desde el dispositivo evaluador. Se aceptan propiedades Gradle o variables de entorno.
+- **Release:** configurar `DS_RELEASE_PROJECTS_URL` y `DS_RELEASE_TASKS_URL` con direcciones HTTPS accesibles desde el dispositivo de destino. Se aceptan propiedades Gradle o variables de entorno.
 - En debug, la excepción de tráfico HTTP está limitada a loopback y al anfitrión del emulador. Release usa HTTPS.
-- El login de evaluación mantiene las cuentas demo de la app existente. Usar la cuenta de administrador de la entrega para demostrar CRUD. Los roles se aplican localmente; los servicios carecen de autenticación remota.
-- El perfil permite editar el nombre local y consultar dónde se guardan los datos. Google y la ayuda de contraseña muestran las instrucciones de acceso de la evaluación.
+- El acceso utiliza cuentas locales de demostración. La cuenta de administrador permite realizar operaciones CRUD. Los roles se aplican localmente; los servicios carecen de autenticación remota.
+- El perfil permite editar el nombre local y consultar dónde se guardan los datos. Google y la ayuda de contraseña muestran las instrucciones de acceso.
 
 ## Uso y contratos REST
 
@@ -139,7 +130,7 @@ La lectura del calendario usa Retrofit y OkHttp para consultar [Nager.Date v4](h
 - La migración Room 8→9 agrega marcas de baja. El historial conserva IDs y minutos. Al primer contacto se adoptan los catálogos locales, incluido el material de demostración de la instalación inicial, por ID. Un alta repetida lee el elemento remoto existente y conserva sus cambios. La app registra la adopción después de confirmar ambos catálogos.
 - Las ediciones del catálogo se confirman primero en el servidor. Con los servicios caídos se puede consultar el catálogo local y registrar horas en los elementos disponibles. Las operaciones de catálogo se pueden volver a intentar cuando vuelve la conexión. No se transfieren horas ni se agregan estadísticas entre dispositivos.
 - Eliminar archiva el catálogo y excluye el elemento de nuevas selecciones. Un cronómetro que ya estaba asociado a un elemento conserva sus referencias. El historial de un proyecto eliminado se puede consultar desde la lista de completados.
-- El Android de evaluación usa un par de servicios y archivos H2 estables. Para cambiar de un entorno de prueba a otro, usar un dispositivo de prueba distinto o un perfil de app limpio. No borrar los datos de una instalación con horas reales.
+- La aplicación Android utiliza un par de servicios y archivos H2 estables. Para cambiar de un entorno de prueba a otro, usar un dispositivo de prueba distinto o un perfil de app limpio. No borrar los datos de una instalación con horas reales.
 
 ## Pruebas
 
@@ -167,11 +158,9 @@ La prueba en vivo crea y archiva registros de demostración en los servicios. Ut
 - Los logs de `build/ev4-android/` registran el CRUD que Android ejecutó contra ambos servicios. La suite confirmó también una consulta Retrofit real de feriados de Chile y el aviso visible en el calendario con una respuesta controlada.
 - La prueba `Test-BackendPersistence.ps1` guardó un proyecto y una tarea, reinició ambos procesos y confirmó su lectura desde los mismos archivos H2.
 
-## Firma release y evidencias de la pauta
+## APK firmado y configuración release
 
-Definir localmente `DS_RELEASE_STORE_FILE`, `DS_RELEASE_STORE_PASSWORD`, `DS_RELEASE_KEY_ALIAS` y `DS_RELEASE_KEY_PASSWORD` junto con las dos URL release. La configuración de Gradle usa esos valores para firmar `assembleRelease`. El APK de evaluación fue generado y verificado con firma v2 el 26 de noviembre de 2026, según el resultado de la compilación y verificación de release. Está disponible en [GitHub Releases](https://github.com/Nxcho777/DeepSource-LMJJ/releases), junto con las instrucciones RELEASE.md, el proxy TLS y la evidencia de firma. El APK usa HTTPS localhost:8441 y localhost:8442 mediante un proxy local y ADB reverse; consultar RELEASE.md para ejecutarlo. Para la demostración desde Android Studio no se requiere ese proxy. Verificar con `apksigner verify --verbose --print-certs <apk>` e instalar el APK en el dispositivo de evaluación. Guardar el keystore fuera del repositorio y entregarlo por el canal privado indicado por la asignatura.
-
-Adjuntar evidencias por indicador: recorrido de pantallas (3.1.1), persistencia tras reinicio y resultados backend (3.1.2), CRUD desde Android (3.1.3), respuesta Retrofit y aviso de feriado (3.1.4), informe JaCoCo JVM (3.2.1), APK y verificación de firma (3.3.1), y enlaces al historial real de aportes del equipo en GitHub y al tablero Trello con responsables y avances (3.3.2).
+Definir localmente `DS_RELEASE_STORE_FILE`, `DS_RELEASE_STORE_PASSWORD`, `DS_RELEASE_KEY_ALIAS` y `DS_RELEASE_KEY_PASSWORD` junto con las dos URL release. La configuración de Gradle usa esos valores para firmar `assembleRelease`. El APK release fue generado y verificado con firma v2 el 26 de noviembre de 2026, según el resultado de la compilación y verificación de release. Está disponible en [GitHub Releases](https://github.com/Nxcho777/DeepSource-LMJJ/releases), junto con las instrucciones RELEASE.md, el proxy TLS y la evidencia de firma. El APK usa HTTPS localhost:8441 y localhost:8442 mediante un proxy local y ADB reverse; consultar RELEASE.md para ejecutarlo. La variante debug de Android Studio no requiere ese proxy. Verificar con `apksigner verify --verbose --print-certs <apk>` e instalar el APK en el dispositivo de destino. Guardar el keystore y sus credenciales fuera del repositorio público.
 
 ## Planificación y colaboración
 
